@@ -139,32 +139,33 @@ def generate_email_content(prompt_type, data):
 
 def send_email(receiver_email, subject, content):
     try:
-        # 创建邮件
+        # Create email message
         msg = MIMEMultipart()
         msg['From'] = EMAIL_SENDER
         msg['To'] = receiver_email
         msg['Subject'] = Header(subject, 'utf-8')
         
-        # 添加正文
+        # Add content
         msg.attach(MIMEText(content, 'html', 'utf-8'))
         
-        # 连接到SMTP服务器并发送
-        smtp_server = 'smtp.mail.me.com'  # iCloud邮箱的SMTP服务器
-        smtp_port = 587  # iCloud邮箱的SMTP端口
+        # Connect to SMTP server and send
+        smtp_server = 'smtp.mail.me.com'  # iCloud SMTP server
+        smtp_port = 587  # iCloud SMTP port
         
-        print(f"正在连接到SMTP服务器: {smtp_server}:{smtp_port}")
+        print(f"Connecting to {smtp_server}:{smtp_port}")
+        
         with smtplib.SMTP(smtp_server, smtp_port) as server:
-            print("SMTP连接成功，正在启用TLS...")
-            server.starttls()  # 启用TLS加密
-            print(f"正在使用邮箱 {EMAIL_SENDER} 登录...")
+            print("Starting TLS")
+            server.starttls()  # Enable TLS encryption
+            print(f"Logging in as {EMAIL_SENDER}")
             server.login(EMAIL_SENDER, EMAIL_PASSWORD)
-            print(f"登录成功，正在发送邮件到 {receiver_email}...")
+            print(f"Sending email to {receiver_email}")
             server.send_message(msg)
-            print("邮件发送成功！")
+            print("Email sent successfully")
             
         return True
     except Exception as e:
-        print(f"邮件发送失败: {str(e)}")
+        print(f"Email sending error: {str(e)}")
         return False
 
 @app.route('/api/schedule-email', methods=['POST'])
