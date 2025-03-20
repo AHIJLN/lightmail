@@ -720,27 +720,27 @@
             const receiverEmail = document.getElementById('receiver-email');
             const sendBtn = document.getElementById('send-btn');
             const promptBtn = document.getElementById('prompt-btn');
-            const scheduleTime = document.getElementById('schedule-time');
-            const repeatOption = document.getElementById('repeat-option');
-            const sendNowOption = document.getElementById('send-now-option');
-            const scheduleOption = document.getElementById('schedule-option');
-            const scheduleForm = document.getElementById('schedule-form');
-            const countdownDisplay = document.getElementById('countdown-display');
-            const timerDisplay = document.getElementById('timer-display');
-            const scheduledTimeDisplay = document.getElementById('scheduled-time');
-            const circleProgress = document.querySelector('.circle-progress');
-            const stopTimerBtn = document.getElementById('stop-timer-btn');
             const confirmSendBtn = document.getElementById('confirm-send-btn');
             const confirmPromptBtn = document.getElementById('confirm-prompt-btn');
             const promptOptions = document.querySelectorAll('.prompt-option');
             const promptDetails = document.querySelectorAll('.prompt-details');
             const sendOptionsContainer = document.getElementById('send-options-container');
             const sendModalFooter = document.getElementById('send-modal-footer');
-            
-            // Modals
             const sendModal = document.getElementById('send-modal');
             const promptModal = document.getElementById('prompt-modal');
             const modalCloseButtons = document.querySelectorAll('[data-modal-close]');
+            
+            // Variables that might be recreated - using let instead of const
+            let sendNowOption = document.getElementById('send-now-option');
+            let scheduleOption = document.getElementById('schedule-option');
+            let scheduleForm = document.getElementById('schedule-form');
+            let countdownDisplay = document.getElementById('countdown-display');
+            let timerDisplay = document.getElementById('timer-display');
+            let scheduledTimeDisplay = document.getElementById('scheduled-time');
+            let stopTimerBtn = document.getElementById('stop-timer-btn');
+            let scheduleTime = document.getElementById('schedule-time');
+            let repeatOption = document.getElementById('repeat-option');
+            let circleProgress = document.querySelector('.circle-progress');
             
             // State variables
             let selectedPrompt = 'future-self';
@@ -751,26 +751,30 @@
             let countdownActive = false;
             let scheduledDateTime = null;
             
-            // Check if Prompt button should be configured based on stored data
+            // Set prompt as configured if previously saved
             if (localStorage.getItem('promptConfigured') === 'true') {
                 promptConfigured = true;
                 promptBtn.classList.add('configured');
+                console.log('从localStorage加载Prompt配置');
             }
             
             // Modal functions
             function openModal(modal) {
                 modal.classList.add('active');
                 document.body.style.overflow = 'hidden';
+                console.log('打开模态框:', modal.id);
             }
             
             function closeModal(modal) {
                 modal.classList.remove('active');
                 document.body.style.overflow = '';
+                console.log('关闭模态框:', modal.id);
                 
                 // If closing the send modal while countdown is active,
                 // make sure we don't stop the countdown
                 if (modal === sendModal && countdownActive) {
                     // Don't reset anything
+                    console.log('倒计时正在进行，不重置发送模态框');
                 } else if (modal === sendModal) {
                     // Reset send modal state
                     resetSendModalState();
@@ -778,6 +782,9 @@
             }
             
             function resetSendModalState() {
+                console.log('重置发送模态框状态');
+                
+                // Reset content
                 sendOptionsContainer.innerHTML = `
                     <div class="send-options">
                         <div class="send-option" id="send-now-option">
@@ -826,20 +833,17 @@
                     </div>
                 `;
                 
-                // Reattach event listeners
-                document.getElementById('send-now-option').addEventListener('click', selectSendNow);
-                document.getElementById('schedule-option').addEventListener('click', selectSchedule);
-                document.getElementById('stop-timer-btn').addEventListener('click', stopTimer);
-                
-                // Update references
-                scheduleTime = document.getElementById('schedule-time');
-                repeatOption = document.getElementById('repeat-option');
+                // Update references to newly created elements
+                sendNowOption = document.getElementById('send-now-option');
+                scheduleOption = document.getElementById('schedule-option');
                 scheduleForm = document.getElementById('schedule-form');
                 countdownDisplay = document.getElementById('countdown-display');
                 timerDisplay = document.getElementById('timer-display');
                 scheduledTimeDisplay = document.getElementById('scheduled-time');
-                circleProgress = document.querySelector('.circle-progress');
                 stopTimerBtn = document.getElementById('stop-timer-btn');
+                scheduleTime = document.getElementById('schedule-time');
+                repeatOption = document.getElementById('repeat-option');
+                circleProgress = document.querySelector('.circle-progress');
                 
                 // Set default time
                 scheduleTime.value = '08:00';
@@ -849,16 +853,47 @@
                 
                 // Reset send option
                 sendOption = 'now';
+                
+                // Reattach event listeners
+                sendNowOption.addEventListener('click', function() {
+                    sendOption = 'now';
+                    this.classList.add('selected');
+                    scheduleOption.classList.remove('selected');
+                    scheduleForm.style.display = 'none';
+                    console.log('选择了立即发送');
+                });
+                
+                scheduleOption.addEventListener('click', function() {
+                    sendOption = 'schedule';
+                    this.classList.add('selected');
+                    sendNowOption.classList.remove('selected');
+                    scheduleForm.style.display = 'block';
+                    console.log('选择了定时发送');
+                });
+                
+                stopTimerBtn.addEventListener('click', function() {
+                    if (currentTaskId) {
+                        cancelTask(currentTaskId);
+                        console.log('停止计时器，任务ID:', currentTaskId);
+                    } else {
+                        console.log('没有活动的任务可以停止');
+                        alert('没有活动的任务可以停止');
+                    }
+                });
             }
             
             // Event Listeners
             sendBtn.addEventListener('click', function() {
+                console.log('点击了发送确定按钮');
+                
                 if (!promptConfigured) {
+                    console.log('需要先设置Prompt');
                     alert('请先设置Prompt');
                     return;
                 }
                 
                 if (!receiverEmail.value) {
+                    console.log('需要填写接收邮箱');
                     alert('请输入接收邮箱地址');
                     receiverEmail.focus();
                     return;
@@ -870,6 +905,7 @@
             });
             
             promptBtn.addEventListener('click', function() {
+                console.log('点击了Prompt按钮');
                 openModal(promptModal);
             });
             
@@ -896,48 +932,46 @@
                 });
                 
                 btn.addEventListener('mouseout', function() {
-                    this.style.borderColor = 'var(--button-border)';
+                    if (!this.classList.contains('configured')) {
+                        this.style.borderColor = 'var(--button-border)';
+                    }
                 });
             });
             
-            // Send options selection
-            function selectSendNow() {
+            // Set initial send options event listeners
+            sendNowOption.addEventListener('click', function() {
                 sendOption = 'now';
                 this.classList.add('selected');
-                document.getElementById('schedule-option').classList.remove('selected');
+                scheduleOption.classList.remove('selected');
                 scheduleForm.style.display = 'none';
-            }
-            
-            function selectSchedule() {
+                console.log('选择了立即发送');
+            });
+                
+            scheduleOption.addEventListener('click', function() {
                 sendOption = 'schedule';
                 this.classList.add('selected');
-                document.getElementById('send-now-option').classList.remove('selected');
+                sendNowOption.classList.remove('selected');
                 scheduleForm.style.display = 'block';
-            }
+                console.log('选择了定时发送');
+            });
             
-            document.getElementById('send-now-option').addEventListener('click', selectSendNow);
-            document.getElementById('schedule-option').addEventListener('click', selectSchedule);
-            
-            // Prompt selector
-            promptOptions.forEach(option => {
-                option.addEventListener('click', function() {
-                    promptOptions.forEach(o => o.classList.remove('selected'));
-                    this.classList.add('selected');
-                    
-                    selectedPrompt = this.getAttribute('data-prompt');
-                    promptDetails.forEach(detail => {
-                        detail.classList.remove('active');
-                    });
-                    document.getElementById(`${selectedPrompt}-details`).classList.add('active');
-                });
+            stopTimerBtn.addEventListener('click', function() {
+                if (currentTaskId) {
+                    cancelTask(currentTaskId);
+                    console.log('停止计时器，任务ID:', currentTaskId);
+                } else {
+                    console.log('没有活动的任务可以停止');
+                    alert('没有活动的任务可以停止');
+                }
             });
             
             // Confirm prompt settings
             confirmPromptBtn.addEventListener('click', function() {
+                console.log('确认Prompt设置');
+                
                 promptConfigured = true;
                 localStorage.setItem('promptConfigured', 'true');
                 promptBtn.classList.add('configured');
-                closeModal(promptModal);
                 
                 // Save prompt settings to localStorage
                 let promptSettings = {};
@@ -972,17 +1006,25 @@
                 
                 localStorage.setItem('promptSettings', JSON.stringify(promptSettings));
                 console.log('Prompt设置已保存:', promptSettings);
+                
+                closeModal(promptModal);
             });
             
             // Confirm send settings
             confirmSendBtn.addEventListener('click', function() {
+                console.log('确认发送设置');
+                
                 if (!receiverEmail.value) {
                     alert('请输入接收邮箱地址');
+                    console.log('邮箱地址为空');
                     return;
                 }
                 
                 // Get prompt settings from localStorage
-                const promptSettings = JSON.parse(localStorage.getItem('promptSettings')) || {};
+                const promptSettingsJSON = localStorage.getItem('promptSettings');
+                console.log('从localStorage获取Prompt设置:', promptSettingsJSON);
+                
+                const promptSettings = promptSettingsJSON ? JSON.parse(promptSettingsJSON) : {};
                 
                 // Collect form data based on selected prompt
                 const data = {
@@ -1001,6 +1043,7 @@
                     
                     // Set scheduled date time for display
                     scheduledDateTime = now;
+                    console.log('设置立即发送时间:', timeString);
                 } else {
                     // Use scheduled time
                     data.scheduleTime = scheduleTime.value;
@@ -1014,9 +1057,11 @@
                     // If time is earlier today, schedule for tomorrow
                     if (scheduleDate < new Date()) {
                         scheduleDate.setDate(scheduleDate.getDate() + 1);
+                        console.log('时间已过，设置为明天同一时间');
                     }
                     
                     scheduledDateTime = scheduleDate;
+                    console.log('设置定时发送时间:', scheduleTime.value, '重复:', repeatOption.value);
                 }
                 
                 // Add specific parameters based on prompt type
@@ -1039,27 +1084,35 @@
                     data.other = promptSettings.other || '';
                 }
                 
+                console.log('准备发送数据:', data);
+                
                 // Schedule the email
                 scheduleEmail(data);
             });
             
-            // Stop timer button
-            function stopTimer() {
-                if (!currentTaskId) {
-                    alert('没有活动的任务可以停止');
-                    return;
-                }
-                
-                cancelTask(currentTaskId);
-            }
-            
-            document.getElementById('stop-timer-btn').addEventListener('click', stopTimer);
+            // Prompt selector
+            promptOptions.forEach(option => {
+                option.addEventListener('click', function() {
+                    const newPrompt = this.getAttribute('data-prompt');
+                    console.log('选择Prompt类型:', newPrompt);
+                    
+                    promptOptions.forEach(o => o.classList.remove('selected'));
+                    this.classList.add('selected');
+                    
+                    selectedPrompt = newPrompt;
+                    promptDetails.forEach(detail => {
+                        detail.classList.remove('active');
+                    });
+                    document.getElementById(`${selectedPrompt}-details`).classList.add('active');
+                });
+            });
             
             // Schedule email function
             async function scheduleEmail(data) {
                 try {
                     confirmSendBtn.disabled = true;
                     confirmSendBtn.textContent = '提交中...';
+                    console.log('发送任务请求到后端...');
                     
                     const response = await fetch(`${API_URL}/api/schedule-email`, {
                         method: 'POST',
@@ -1070,19 +1123,27 @@
                     });
                     
                     const result = await response.json();
+                    console.log('后端响应:', result);
                     
                     if (response.ok) {
                         // Hide send options and footer, show countdown
-                        const optionsElements = sendOptionsContainer.querySelectorAll('.send-options, .time-settings');
-                        optionsElements.forEach(el => el.style.display = 'none');
-                        countdownDisplay.style.display = 'block';
+                        const optionsDiv = sendOptionsContainer.querySelector('.send-options');
+                        if (optionsDiv) {
+                            optionsDiv.style.display = 'none';
+                        }
+                        if (scheduleForm) {
+                            scheduleForm.style.display = 'none';
+                        }
+                        if (countdownDisplay) {
+                            countdownDisplay.style.display = 'block';
+                        }
                         sendModalFooter.style.display = 'none';
-                        
-                        console.log('任务已安排:', result);
                         
                         // Format the scheduled time
                         const formattedTime = scheduledDateTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                        scheduledTimeDisplay.textContent = formattedTime;
+                        if (scheduledTimeDisplay) {
+                            scheduledTimeDisplay.textContent = formattedTime;
+                        }
                         
                         // Start countdown
                         currentTaskId = result.taskId;
@@ -1091,13 +1152,16 @@
                         
                         // Change send button to indicate active task
                         sendBtn.classList.add('configured');
+                        
+                        console.log('任务已安排，ID:', currentTaskId);
                     } else {
                         alert(`任务安排失败: ${result.message}`);
+                        console.error('任务安排失败:', result.message);
                         closeModal(sendModal);
                     }
                 } catch (error) {
                     alert(`发生错误: ${error.message}`);
-                    console.error('安排任务失败:', error);
+                    console.error('发送请求错误:', error);
                     closeModal(sendModal);
                 } finally {
                     confirmSendBtn.disabled = false;
@@ -1109,12 +1173,14 @@
             async function cancelTask(taskId) {
                 try {
                     stopTimerBtn.disabled = true;
+                    console.log('发送取消任务请求, ID:', taskId);
                     
                     const response = await fetch(`${API_URL}/api/cancel-task/${taskId}`, {
                         method: 'POST'
                     });
                     
                     const result = await response.json();
+                    console.log('取消任务响应:', result);
                     
                     if (response.ok) {
                         alert('任务已取消');
@@ -1126,29 +1192,47 @@
                         // Reset send button
                         sendBtn.classList.remove('configured');
                         
-                        console.log('任务已取消:', taskId);
+                        console.log('任务已成功取消');
                     } else {
                         alert(`取消任务失败: ${result.message}`);
+                        console.error('取消任务失败:', result.message);
                         stopTimerBtn.disabled = false;
                     }
                 } catch (error) {
                     alert(`发生错误: ${error.message}`);
-                    console.error('取消任务失败:', error);
+                    console.error('取消请求错误:', error);
                     stopTimerBtn.disabled = false;
                 }
             }
             
             // Start countdown timer
             function startCountdown(targetTime) {
-                // SVG circle properties
-                const circle = circleProgress;
-                const circumference = parseInt(circle.getAttribute('stroke-dasharray'));
+                console.log('开始倒计时，目标时间:', targetTime);
+                
+                // Get the current circle progress element
+                circleProgress = document.querySelector('.circle-progress');
+                if (!circleProgress) {
+                    console.error('找不到进度圆环元素');
+                    return;
+                }
+                
+                const circumference = parseInt(circleProgress.getAttribute('stroke-dasharray'));
                 
                 if (intervalId) {
                     clearInterval(intervalId);
                 }
                 
                 intervalId = setInterval(function() {
+                    // Ensure we have the latest references
+                    timerDisplay = document.getElementById('timer-display');
+                    circleProgress = document.querySelector('.circle-progress');
+                    
+                    if (!timerDisplay || !circleProgress) {
+                        console.error('倒计时元素已不存在，停止倒计时');
+                        clearInterval(intervalId);
+                        return;
+                    }
+                    
                     const now = new Date();
                     const diff = targetTime - now;
                     
@@ -1160,6 +1244,7 @@
                         // Reset send button
                         sendBtn.classList.remove('configured');
                         
+                        console.log('倒计时结束，邮件已发送');
                         alert('邮件已发送');
                         closeModal(sendModal);
                         return;
@@ -1178,7 +1263,7 @@
                     const maxDuration = 60 * 60 * 1000; // 1 hour in milliseconds
                     const progress = Math.min(1, diff / maxDuration);
                     const dashOffset = circumference * (1 - progress);
-                    circle.style.strokeDashoffset = dashOffset;
+                    circleProgress.style.strokeDashoffset = dashOffset;
                     
                 }, 1000);
             }
@@ -1186,11 +1271,15 @@
             // Load saved prompt settings
             function loadPromptSettings() {
                 const savedSettings = localStorage.getItem('promptSettings');
+                console.log('加载保存的Prompt设置:', savedSettings);
+                
                 if (savedSettings) {
                     const settings = JSON.parse(savedSettings);
                     
                     // Set the correct prompt type
                     selectedPrompt = settings.type || 'future-self';
+                    console.log('设置选中的Prompt类型:', selectedPrompt);
+                    
                     promptOptions.forEach(option => {
                         if (option.getAttribute('data-prompt') === selectedPrompt) {
                             option.classList.add('selected');
@@ -1228,13 +1317,18 @@
             }
             
             // Initialize
+            console.log('页面初始化...');
+            
             // Set default time to 8:00 AM
-            scheduleTime.value = '08:00';
+            if (scheduleTime) {
+                scheduleTime.value = '08:00';
+            }
             
             // Load saved prompt settings
             loadPromptSettings();
+            
+            console.log('初始化完成');
         });
     </script>
 </body>
 </html>
-
