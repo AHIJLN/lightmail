@@ -137,7 +137,6 @@ def generate_email_content(prompt_type, data):
         """
         return subject, html_content
 
-# 邮件发送函数
 def send_email(receiver_email, subject, content):
     try:
         # 创建邮件
@@ -153,13 +152,19 @@ def send_email(receiver_email, subject, content):
         smtp_server = 'smtp.mail.me.com'  # iCloud邮箱的SMTP服务器
         smtp_port = 587  # iCloud邮箱的SMTP端口
         
+        print(f"正在连接到SMTP服务器: {smtp_server}:{smtp_port}")
         with smtplib.SMTP(smtp_server, smtp_port) as server:
+            print("SMTP连接成功，正在启用TLS...")
             server.starttls()  # 启用TLS加密
+            print(f"正在使用邮箱 {EMAIL_SENDER} 登录...")
             server.login(EMAIL_SENDER, EMAIL_PASSWORD)
+            print(f"登录成功，正在发送邮件到 {receiver_email}...")
             server.send_message(msg)
+            print("邮件发送成功！")
             
         return True
     except Exception as e:
+        print(f"邮件发送失败: {str(e)}")
         return False
 
 @app.route('/api/schedule-email', methods=['POST'])
