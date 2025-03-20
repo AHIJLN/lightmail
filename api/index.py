@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, Response
 from datetime import datetime, timedelta
 import uuid
 import json
@@ -10,15 +10,12 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.header import Header
 import time
-from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.triggers.date import DateTrigger
 
 app = Flask(__name__)
 
 # 配置日志
 logging.basicConfig(level=logging.INFO, 
-                   format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                   filename='email_sender.log')
+                   format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 # 固定API设置
@@ -32,12 +29,8 @@ API_SETTINGS = {
 EMAIL_SENDER = 'lanh_1jiu@icloud.com'
 EMAIL_PASSWORD = 'qxwp-eqqw-enuu-bhqe'
 
-# 内存中存储任务
+# 内存中存储任务 (注意: Vercel Serverless函数是无状态的，每次调用都会重置)
 tasks = {}
-
-# 创建调度器
-scheduler = BackgroundScheduler()
-scheduler.start()
 
 # 生成提示词
 def generate_prompt(prompt_type, data):
@@ -187,72 +180,27 @@ def send_email(receiver_email, subject, content):
         logger.error(f"发送邮件出错: {str(e)}")
         return False
 
-# 执行任务的函数
-def execute_task(task_id):
+# 执行任务函数（由于Vercel的无状态特性，实际执行需要通过外部触发）
+def execute_task(task_data):
     try:
-        if task_id not in tasks:
-            logger.error(f"任务不存在: {task_id}")
-            return
+        receiver_email = task_data.get('receiverEmail')
+        prompt_type = task_data.get('promptType', 'future-self')
         
-        task = tasks[task_id]
-        data = task['data']
-        
-        receiver_email = data.get('receiverEmail')
-        prompt_type = data.get('promptType', 'future-self')
-        
-        subject, content = generate_email_content(prompt_type, data)
+        subject, content = generate_email_content(prompt_type, task_data)
         
         # 发送邮件
         success = send_email(receiver_email, subject, content)
-        
-        if success:
-            # 检查是否需要重复
-            repeat_option = data.get('repeatOption', 'none')
-            
-            if repeat_option != 'none':
-                # 计算下次执行时间
-                next_run = datetime.fromisoformat(task['nextRun'])
-                
-                if repeat_option == 'daily':
-                    next_run = next_run + timedelta(days=1)
-                elif repeat_option == 'weekly':
-                    next_run = next_run + timedelta(days=7)
-                elif repeat_option == 'monthly':
-                    # 简单处理，加30天
-                    next_run = next_run + timedelta(days=30)
-                
-                # 更新任务
-                task['nextRun'] = next_run.isoformat()
-                task['lastRun'] = datetime.now().isoformat()
-                
-                # 调度下一次执行
-                job_id = f"task_{task_id}_{next_run.timestamp()}"
-                scheduler.add_job(
-                    execute_task,
-                    DateTrigger(run_date=next_run),
-                    args=[task_id],
-                    id=job_id,
-                    replace_existing=True
-                )
-                
-                logger.info(f"重复任务已调度: {task_id}, 下次执行时间: {next_run.isoformat()}")
-            else:
-                # 标记为已完成
-                task['completed'] = True
-                task['lastRun'] = datetime.now().isoformat()
-                logger.info(f"任务已完成: {task_id}")
-        else:
-            logger.error(f"任务执行失败: {task_id}")
-            # 可以在这里添加重试逻辑
+        return success
     except Exception as e:
-        logger.error(f"执行任务出错: {task_id}, 错误: {str(e)}")
+        logger.error(f"执行任务出错: {str(e)}")
+        return False
 
 # API路由
 @app.route('/api/schedule-email', methods=['POST'])
 def schedule_email():
     try:
         data = request.json
-        logger.info(f"收到的请求数据: {data}")
+        logger.info(f"收到的请求数据: {json.dumps(data)}")
         
         # 验证必要字段
         if not data.get('receiverEmail'):
@@ -272,8 +220,22 @@ def schedule_email():
         # 如果时间已经过去，则设置为明天
         if target < now:
             target += timedelta(days=1)
-            
-        # 存储任务
+        
+        # 如果是"立即发送"选项，我们直接尝试发送
+        if data.get('sendOption') == 'now' or (hours == now.hour and abs(minutes - now.minute) <= 2):
+            # 直接执行发送
+            success = execute_task(data)
+            if success:
+                logger.info(f"邮件已直接发送至: {data.get('receiverEmail')}")
+                return jsonify({
+                    "message": "邮件已发送",
+                    "taskId": task_id,
+                    "nextRun": datetime.now().isoformat()
+                })
+            else:
+                return jsonify({"message": "邮件发送失败，请稍后再试"}), 500
+        
+        # 存储任务信息 (注意: 在Vercel上，这只是临时存储)
         tasks[task_id] = {
             'id': task_id,
             'data': data,
@@ -282,17 +244,10 @@ def schedule_email():
             'completed': False
         }
         
-        # 调度任务
-        job_id = f"task_{task_id}"
-        scheduler.add_job(
-            execute_task,
-            DateTrigger(run_date=target),
-            args=[task_id],
-            id=job_id,
-            replace_existing=True
-        )
-        
         logger.info(f"任务已创建: {task_id}, 将在 {target.isoformat()} 执行")
+        
+        # 注意: 在Vercel上，您需要外部机制来实际执行这些任务
+        # 例如: 使用Vercel Cron Jobs或其他第三方服务
         
         return jsonify({
             "message": "任务已安排",
@@ -308,19 +263,12 @@ def schedule_email():
 def cancel_task(task_id):
     try:
         if task_id in tasks:
-            # 移除调度任务
-            job_id = f"task_{task_id}"
-            try:
-                scheduler.remove_job(job_id)
-            except:
-                pass  # 任务可能已经执行或不存在
-                
-            # 移除任务
+            # 在Vercel上，这只是从临时内存中移除
             task = tasks.pop(task_id)
             logger.info(f"任务已取消: {task_id}")
             return jsonify({"message": "任务已取消", "task": task})
         else:
-            return jsonify({"message": "任务不存在"}), 404
+            return jsonify({"message": "任务不存在或已完成"}), 404
     except Exception as e:
         logger.error(f"取消任务出错: {str(e)}")
         return jsonify({"message": f"发生错误: {str(e)}"}), 500
@@ -333,6 +281,32 @@ def status():
         "time": datetime.now().isoformat()
     })
 
-# Vercel Serverless函数处理
-def handler(environ, start_response):
-    return app(environ, start_response)
+# Vercel特定的处理程序函数
+def handler(request):
+    """处理Vercel Serverless请求的函数"""
+    
+    # 从环境变量获取路径
+    path = request.path
+    
+    # 根据路径路由到正确的处理程序
+    if path == '/api/schedule-email' and request.method == 'POST':
+        try:
+            data = request.json
+            response = schedule_email()
+            return response
+        except Exception as e:
+            return jsonify({"message": f"错误: {str(e)}"}), 500
+            
+    elif path.startswith('/api/cancel-task/') and request.method == 'POST':
+        try:
+            task_id = path.split('/api/cancel-task/')[1]
+            response = cancel_task(task_id)
+            return response
+        except Exception as e:
+            return jsonify({"message": f"错误: {str(e)}"}), 500
+            
+    elif path == '/api/status' and request.method == 'GET':
+        return status()
+        
+    else:
+        return jsonify({"message": "路径不存在"}), 404
