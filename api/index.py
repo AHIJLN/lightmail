@@ -257,10 +257,14 @@ def after_request(response):
     response.headers.add('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
     return response
 
-# Vercel入口点
-def handler(event, context):
-    return app(event, context)
+
+from http.server import BaseHTTPRequestHandler
+
+def lambda_handler(event, context):
+    return app
 
 # 本地测试用
 if __name__ == '__main__':
     app.run(debug=True)
+
+
