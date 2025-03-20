@@ -467,8 +467,7 @@ def run_scheduled_task(task_id):
             
             # 更新下次执行时间
             task['nextRun'] = next_run.isoformat()
-            logger.info(f"任务 {task_id} 下次执行时间: {next_run}")
-        
+            logger.info(f"任务 {task_id} 下次执行时间: {next_r
         except Exception as e:
             logger.error(f"执行任务 {task_id} 时出错: {str(e)}")
             # 出错后尝试延后30分钟再次执行
@@ -476,5 +475,4 @@ def run_scheduled_task(task_id):
             task['nextRun'] = next_run.isoformat()
             logger.info(f"任务 {task_id} 已重新安排在 {next_run} 执行")
 
-if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=8000)
+if __name__ == '__main_
