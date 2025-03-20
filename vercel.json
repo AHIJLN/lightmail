@@ -1,11 +1,5 @@
 {
-"version": 2,
-  "functions": {
-    "api/index.py": {
-      "memory": 1024,
-      "maxDuration": 10
-    }
-  },
+  "version": 2,
   "builds": [
     {
       "src": "api/index.py",
@@ -19,11 +13,11 @@
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "api/index.py"
+      "dest": "/api/index.py"
     },
     {
       "src": "/(.*)",
-      "dest": "public/$1"
+      "dest": "/public/$1"
     }
   ]
 }
