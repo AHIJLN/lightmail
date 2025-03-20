@@ -8,6 +8,8 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.header import Header
 import os
+import logging
+import sys
 
 app = Flask(__name__)
 
@@ -137,48 +139,85 @@ def generate_email_content(prompt_type, data):
         """
         return subject, html_content
 
+ 配置日志记录
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[logging.StreamHandler(sys.stdout)]
+)
+logger = logging.getLogger(__name__)
+
+# 修改send_email函数，增加详细日志
 def send_email(receiver_email, subject, content):
     try:
-        # Create email message
+        logger.info(f"开始准备发送邮件到 {receiver_email}")
+        
+        # 创建邮件
         msg = MIMEMultipart()
         msg['From'] = EMAIL_SENDER
         msg['To'] = receiver_email
         msg['Subject'] = Header(subject, 'utf-8')
         
-        # Add content
+        # 添加正文
         msg.attach(MIMEText(content, 'html', 'utf-8'))
+        logger.info(f"邮件内容已准备好，主题: {subject}")
         
-        # Connect to SMTP server and send
-        smtp_server = 'smtp.mail.me.com'  # iCloud SMTP server
-        smtp_port = 587  # iCloud SMTP port
+        # 连接到SMTP服务器并发送
+        smtp_server = 'smtp.mail.me.com'  # iCloud邮箱的SMTP服务器
+        smtp_port = 587  # iCloud邮箱的SMTP端口
         
-        print(f"Connecting to {smtp_server}:{smtp_port}")
-        
-        with smtplib.SMTP(smtp_server, smtp_port) as server:
-            print("Starting TLS")
-            server.starttls()  # Enable TLS encryption
-            print(f"Logging in as {EMAIL_SENDER}")
-            server.login(EMAIL_SENDER, EMAIL_PASSWORD)
-            print(f"Sending email to {receiver_email}")
-            server.send_message(msg)
-            print("Email sent successfully")
+        logger.info(f"正在连接到SMTP服务器: {smtp_server}:{smtp_port}")
+        try:
+            server = smtplib.SMTP(smtp_server, smtp_port, timeout=15)
+            logger.info("SMTP服务器连接成功")
             
-        return True
+            logger.info("正在启用TLS加密...")
+            server.starttls()
+            logger.info("TLS加密启用成功")
+            
+            logger.info(f"正在使用邮箱 {EMAIL_SENDER} 登录...")
+            server.login(EMAIL_SENDER, EMAIL_PASSWORD)
+            logger.info("登录成功")
+            
+            logger.info(f"正在发送邮件到 {receiver_email}...")
+            server.send_message(msg)
+            logger.info("邮件发送成功！")
+            
+            server.quit()
+            logger.info("SMTP连接已关闭")
+            return True
+        except smtplib.SMTPException as smtp_error:
+            logger.error(f"SMTP错误: {str(smtp_error)}")
+            return False
+        except TimeoutError:
+            logger.error("SMTP连接超时")
+            return False
+            
     except Exception as e:
-        print(f"Email sending error: {str(e)}")
+        logger.error(f"邮件发送过程中出现异常: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
         return False
 
+
+
+
+# 在schedule_email函数中也增加日志
 @app.route('/api/schedule-email', methods=['POST'])
 def schedule_email():
     try:
+        logger.info("收到邮件发送请求")
         data = request.get_json()
+        logger.info(f"请求数据: {data}")
         
         # 验证必要字段
         if not data.get('receiverEmail'):
+            logger.warning("接收邮箱地址不能为空")
             return jsonify({"message": "接收邮箱地址不能为空"}), 400
             
         # 生成唯一任务ID
         task_id = str(uuid.uuid4())
+        logger.info(f"生成任务ID: {task_id}")
         
         # 解析时间
         schedule_time = data.get('scheduleTime', '08:00')
@@ -196,27 +235,35 @@ def schedule_email():
         if data.get('sendOption') == 'now' or (hours == now.hour and abs(minutes - now.minute) <= 2):
             prompt_type = data.get('promptType', 'future-self')
             receiver_email = data.get('receiverEmail')
+            logger.info(f"准备立即发送邮件到 {receiver_email}")
             
             subject, content = generate_email_content(prompt_type, data)
+            logger.info(f"已生成邮件内容，主题: {subject}")
+            
             success = send_email(receiver_email, subject, content)
             
             if success:
+                logger.info("邮件发送成功")
                 return jsonify({
                     "message": "邮件已发送",
                     "taskId": task_id,
                     "nextRun": datetime.now().isoformat()
                 })
             else:
+                logger.error("邮件发送失败")
                 return jsonify({"message": "邮件发送失败，请稍后再试"}), 500
         else:
+            logger.info(f"安排定时任务，计划执行时间: {target.isoformat()}")
             # 由于Vercel Serverless的限制，我们只返回成功响应
-            # 实际发送需要设置外部触发器
             return jsonify({
                 "message": "任务已安排",
                 "taskId": task_id,
                 "nextRun": target.isoformat()
             })
     except Exception as e:
+        logger.error(f"处理邮件请求时出错: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
         return jsonify({"message": f"发生错误: {str(e)}"}), 500
 
 @app.route('/api/cancel-task/<task_id>', methods=['POST'])
