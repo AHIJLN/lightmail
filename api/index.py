@@ -1,13 +1,15 @@
-from http.server import BaseHTTPRequestHandler
-from datetime import datetime, timedelta
+from flask import Flask, Response, request, jsonify
 import json
 import uuid
 import requests
+from datetime import datetime, timedelta
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.header import Header
 import os
+
+app = Flask(__name__)
 
 # 固定API设置
 API_SETTINGS = {
@@ -20,6 +22,7 @@ API_SETTINGS = {
 EMAIL_SENDER = 'lanh_1jiu@icloud.com'
 EMAIL_PASSWORD = 'qxwp-eqqw-enuu-bhqe'
 
+# 生成提示词
 def generate_prompt(prompt_type, data):
     if prompt_type == 'future-self':
         gender = data.get('gender', '男')
@@ -70,6 +73,7 @@ def generate_prompt(prompt_type, data):
         
     return prompt
 
+# 使用AI生成邮件内容
 def generate_email_content(prompt_type, data):
     try:
         prompt = generate_prompt(prompt_type, data)
@@ -133,6 +137,7 @@ def generate_email_content(prompt_type, data):
         """
         return subject, html_content
 
+# 邮件发送函数
 def send_email(receiver_email, subject, content):
     try:
         # 创建邮件
@@ -157,88 +162,105 @@ def send_email(receiver_email, subject, content):
     except Exception as e:
         return False
 
-class handler(BaseHTTPRequestHandler):
-    def do_POST(self):
-        try:
-            if self.path == '/api/schedule-email':
-                content_length = int(self.headers['Content-Length'])
-                post_data = self.rfile.read(content_length)
-                data = json.loads(post_data.decode('utf-8'))
-                
-                # 验证必要字段
-                if not data.get('receiverEmail'):
-                    self._send_response(400, {"message": "接收邮箱地址不能为空"})
-                    return
-                    
-                # 生成唯一任务ID
-                task_id = str(uuid.uuid4())
-                
-                # 解析时间
-                schedule_time = data.get('scheduleTime', '08:00')
-                hours, minutes = map(int, schedule_time.split(':'))
-                
-                # 创建目标时间
-                now = datetime.now()
-                target = now.replace(hour=hours, minute=minutes, second=0, microsecond=0)
-                
-                # 如果时间已经过去，则设置为明天
-                if target < now:
-                    target += timedelta(days=1)
-                
-                # 如果是立即发送，直接处理
-                if data.get('sendOption') == 'now' or (hours == now.hour and abs(minutes - now.minute) <= 2):
-                    prompt_type = data.get('promptType', 'future-self')
-                    receiver_email = data.get('receiverEmail')
-                    
-                    subject, content = generate_email_content(prompt_type, data)
-                    success = send_email(receiver_email, subject, content)
-                    
-                    if success:
-                        self._send_response(200, {
-                            "message": "邮件已发送",
-                            "taskId": task_id,
-                            "nextRun": datetime.now().isoformat()
-                        })
-                    else:
-                        self._send_response(500, {"message": "邮件发送失败，请稍后再试"})
-                else:
-                    # 由于Vercel Serverless的限制，我们只返回成功响应
-                    # 实际发送需要设置外部触发器
-                    self._send_response(200, {
-                        "message": "任务已安排",
-                        "taskId": task_id,
-                        "nextRun": target.isoformat()
-                    })
+@app.route('/api/schedule-email', methods=['POST'])
+def schedule_email():
+    try:
+        data = request.get_json()
+        
+        # 验证必要字段
+        if not data.get('receiverEmail'):
+            return jsonify({"message": "接收邮箱地址不能为空"}), 400
             
-            elif self.path.startswith('/api/cancel-task/'):
-                task_id = self.path.split('/api/cancel-task/')[1]
-                # 在Vercel上，我们不能真正取消任务，但我们可以返回成功
-                self._send_response(200, {"message": "任务已取消", "task": {"id": task_id}})
-                
-            else:
-                self._send_response(404, {"message": "路径不存在"})
-                
-        except Exception as e:
-            self._send_response(500, {"message": f"发生错误: {str(e)}"})
-    
-    def do_GET(self):
-        try:
-            if self.path == '/api/status':
-                self._send_response(200, {
-                    "status": "running",
-                    "taskCount": 0,
-                    "time": datetime.now().isoformat()
+        # 生成唯一任务ID
+        task_id = str(uuid.uuid4())
+        
+        # 解析时间
+        schedule_time = data.get('scheduleTime', '08:00')
+        hours, minutes = map(int, schedule_time.split(':'))
+        
+        # 创建目标时间
+        now = datetime.now()
+        target = now.replace(hour=hours, minute=minutes, second=0, microsecond=0)
+        
+        # 如果时间已经过去，则设置为明天
+        if target < now:
+            target += timedelta(days=1)
+        
+        # 如果是立即发送，直接处理
+        if data.get('sendOption') == 'now' or (hours == now.hour and abs(minutes - now.minute) <= 2):
+            prompt_type = data.get('promptType', 'future-self')
+            receiver_email = data.get('receiverEmail')
+            
+            subject, content = generate_email_content(prompt_type, data)
+            success = send_email(receiver_email, subject, content)
+            
+            if success:
+                return jsonify({
+                    "message": "邮件已发送",
+                    "taskId": task_id,
+                    "nextRun": datetime.now().isoformat()
                 })
             else:
-                self._send_response(404, {"message": "路径不存在"})
-        except Exception as e:
-            self._send_response(500, {"message": f"发生错误: {str(e)}"})
-    
-    def _send_response(self, status_code, data):
-        self.send_response(status_code)
-        self.send_header('Content-type', 'application/json')
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
-        self.end_headers()
-        self.wfile.write(json.dumps(data).encode('utf-8'))
+                return jsonify({"message": "邮件发送失败，请稍后再试"}), 500
+        else:
+            # 由于Vercel Serverless的限制，我们只返回成功响应
+            # 实际发送需要设置外部触发器
+            return jsonify({
+                "message": "任务已安排",
+                "taskId": task_id,
+                "nextRun": target.isoformat()
+            })
+    except Exception as e:
+        return jsonify({"message": f"发生错误: {str(e)}"}), 500
+
+@app.route('/api/cancel-task/<task_id>', methods=['POST'])
+def cancel_task(task_id):
+    try:
+        # 在Vercel上，我们不能真正取消任务，但我们可以返回成功
+        return jsonify({"message": "任务已取消", "task": {"id": task_id}})
+    except Exception as e:
+        return jsonify({"message": f"发生错误: {str(e)}"}), 500
+
+@app.route('/api/status', methods=['GET'])
+def status():
+    return jsonify({
+        "status": "running",
+        "taskCount": 0,
+        "time": datetime.now().isoformat()
+    })
+
+# 处理CORS的OPTIONS请求
+@app.route('/api/schedule-email', methods=['OPTIONS'])
+def options_schedule_email():
+    return _build_cors_preflight_response()
+
+@app.route('/api/cancel-task/<path:task_id>', methods=['OPTIONS'])
+def options_cancel_task(task_id):
+    return _build_cors_preflight_response()
+
+@app.route('/api/status', methods=['OPTIONS'])
+def options_status():
+    return _build_cors_preflight_response()
+
+def _build_cors_preflight_response():
+    response = jsonify({})
+    response.headers.add("Access-Control-Allow-Origin", "*")
+    response.headers.add("Access-Control-Allow-Headers", "Content-Type")
+    response.headers.add("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+    return response
+
+# 为Vercel部署添加CORS头到所有响应
+@app.after_request
+def after_request(response):
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+    response.headers.add('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+    return response
+
+# Vercel入口点
+def handler(event, context):
+    return app(event, context)
+
+# 本地测试用
+if __name__ == '__main__':
+    app.run(debug=True)
