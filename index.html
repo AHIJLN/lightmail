@@ -863,7 +863,7 @@
 
         scheduleContainer.classList.remove('active');
         countdownContainer.classList.add('active');
-        countdownInfo.textContent = 将于 ${scheduleDate.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})} 发送;
+        countdownInfo.textContent =` 将于 ${scheduleDate.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})} 发送`;
 
         const diff = Math.floor((scheduleDate.getTime() - Date.now())/1000);
         startTimeCountdown(diff);
