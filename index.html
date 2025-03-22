@@ -1075,61 +1075,64 @@
         return { subject, promptText };
       }
 
-      // 调用 AI 接口生成信件内容（示例为流式接口）
-      async function generateContent(promptText) {
-        console.log("调用AI生成内容，提示：", promptText);
-        const API_SETTINGS = {
-          apiKey: 'AIKEY',  
-          apiUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
-          apiModel: 'qwq-plus'
-        };
-        const payload = {
-          model: API_SETTINGS.apiModel,
-          messages: [{ role: 'user', content: promptText }],
-          temperature: 0.7,
-          max_tokens: 2000,
-          stream: true
-        };
-        try {
-          const response = await fetch(API_SETTINGS.apiUrl, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer ' + API_SETTINGS.apiKey
-            },
-            body: JSON.stringify(payload)
-          });
-          if (!response.ok) {
-            throw new Error("AI接口请求失败: " + response.status);
-          }
-          const reader = response.body.getReader();
-          let completeContent = "";
-          while(true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            const chunk = new TextDecoder().decode(value);
-            const lines = chunk.split('\n');
-            for (const line of lines) {
-              if (line.startsWith('data: ') && line !== 'data: [DONE]') {
-                try {
-                  const jsonStr = line.substring(6);
-                  const jsonData = JSON.parse(jsonStr);
-                  if (jsonData.choices && jsonData.choices[0].delta.content) {
-                    completeContent += jsonData.choices[0].delta.content;
-                  }
-                } catch(e) {
-                  console.log("解析流数据出错:", e, line);
-                }
-              }
+   
+// 调用 AI 接口生成信件内容（通过 Worker 代理）
+async function generateContent(promptText) {
+  console.log("调用AI生成内容，提示：", promptText);
+  
+  const payload = {
+    model: "qwq-plus",
+    messages: [{ role: 'user', content: promptText }],
+    temperature: 0.7,
+    max_tokens: 2000,
+    stream: true
+  };
+  
+  try {
+    // 使用 Worker 代理 API 请求，而不是直接调用 DashScope API
+    const response = await fetch("/api/generate-content", {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+    
+    if (!response.ok) {
+      throw new Error("AI接口请求失败: " + response.status);
+    }
+    
+    const reader = response.body.getReader();
+    let completeContent = "";
+    
+    while(true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const chunk = new TextDecoder().decode(value);
+      const lines = chunk.split('\n');
+      for (const line of lines) {
+        if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+          try {
+            const jsonStr = line.substring(6);
+            const jsonData = JSON.parse(jsonStr);
+            if (jsonData.choices && jsonData.choices[0].delta.content) {
+              completeContent += jsonData.choices[0].delta.content;
             }
+          } catch(e) {
+            console.log("解析流数据出错:", e, line);
           }
-          return completeContent;
-        } catch (error) {
-          console.log("AI生成内容错误:", error);
-          alert("AI生成内容失败：" + error.message);
-          return "";
         }
       }
+    }
+    
+    return completeContent;
+  } catch (error) {
+    console.log("AI生成内容错误:", error);
+    alert("AI生成内容失败：" + error.message);
+    return "";
+  }
+}
+
 
       // 邮件发送
       async function sendEmail(subject, content, receiver) {
