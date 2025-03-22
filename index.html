@@ -1079,7 +1079,7 @@
       async function generateContent(promptText) {
         console.log("调用AI生成内容，提示：", promptText);
         const API_SETTINGS = {
-          apiKey: '',  
+          apiKey: 'AIKEY',  
           apiUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
           apiModel: 'qwq-plus'
         };
@@ -1087,7 +1087,7 @@
           model: API_SETTINGS.apiModel,
           messages: [{ role: 'user', content: promptText }],
           temperature: 0.7,
-          max_tokens: 600,
+          max_tokens: 2000,
           stream: true
         };
         try {
@@ -1141,7 +1141,7 @@
           message: htmlContent
         };
         try {
-          const resp = await emailjs.send("service_demo_id", "template_demo_id", templateParams);
+          const resp = await emailjs.send("service_x4a4ydu", "template_2451q64", templateParams);
           console.log("邮件发送成功：", resp.text);
         } catch (err) {
           console.log("邮件发送失败：", err);
