@@ -1076,9 +1076,9 @@
       }
 
 
+	
 	async function generateContent(promptText) {
 	  console.log("调用AI生成内容，提示：", promptText);
-	  
 	  const payload = {
 	    model: "qwq-plus",
 	    messages: [{ role: 'user', content: promptText }],
@@ -1102,28 +1102,45 @@
 	    }
 	    
 	    const reader = response.body.getReader();
+	    const decoder = new TextDecoder();
 	    let completeContent = "";
+	    let buffer = ""; // 用于存储不完整的JSON片段
 	    
-	    while(true) {
+	    while (true) {
 	      const { done, value } = await reader.read();
 	      if (done) break;
-	      const chunk = new TextDecoder().decode(value);
-	      const lines = chunk.split('\n');
+	      
+	      // 解码当前块并添加到缓冲区
+	      const chunk = decoder.decode(value, { stream: true });
+	      buffer += chunk;
+	      
+	      // 处理SSE格式的数据
+	      const lines = buffer.split('\n\n');
+	      // 保留最后一个可能不完整的行
+	      buffer = lines.pop() || "";
+	      
 	      for (const line of lines) {
-	        if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+	        if (line.startsWith('data: ')) {
+	          const jsonStr = line.substring(6).trim();
+	          
+	          if (jsonStr === '[DONE]') continue;
+	          
 	          try {
-	            const jsonStr = line.substring(6);
-	            const jsonData = JSON.parse(jsonStr);
-	            if (jsonData.choices && jsonData.choices[0].delta.content) {
-	              completeContent += jsonData.choices[0].delta.content;
+	            // 只有在确保是完整的JSON字符串时才解析
+	            if (jsonStr) {
+	              const jsonData = JSON.parse(jsonStr);
+	              if (jsonData.choices && jsonData.choices[0].delta && jsonData.choices[0].delta.content) {
+	                completeContent += jsonData.choices[0].delta.content;
+	              }
 	            }
-	          } catch(e) {
-	            console.log("解析流数据出错:", e, line);
+	          } catch (e) {
+	            console.log("解析流数据出错:", e, jsonStr);
+	            // 不中断处理，继续尝试解析其他行
 	          }
 	        }
 	      }
 	    }
-	    
+	
 	    return completeContent;
 	  } catch (error) {
 	    console.log("AI生成内容错误:", error);
