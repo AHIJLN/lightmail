@@ -1,6 +1,7 @@
 {
   "name": "lightmail",
   "compatibility_date": "2025-03-22",
+  "main": "index.js",
   "assets": {
     "directory": "./"
   }
