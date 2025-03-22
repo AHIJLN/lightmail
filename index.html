@@ -1,0 +1,1176 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Light-mail - 鼓励邮件定时发送系统</title>
+  <!-- Bootstrap 样式 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+  <!-- 引入 EmailJS 脚本 -->
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+  <style>
+    :root {
+      --primary-color: #4285F4;
+      --primary-hover: #357ae8;
+      --secondary-color: #f8f9fa;
+      --text-color: #202124;
+      --light-gray: #e6e6e6;
+      --medium-gray: #757575;
+      --google-red: #EA4335;
+      --google-yellow: #FBBC05;
+      --google-green: #34A853;
+      --background: #ffffff;
+      --button-bg: #f8f9fa;
+      --button-border: #dadce0;
+    }
+    body {
+      font-family: 'Google Sans', Arial, sans-serif;
+      color: var(--text-color);
+      line-height: 1.6;
+      background-color: var(--background);
+      padding-top: 50px;
+    }
+    .main-container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 25px;
+    }
+    .logo-container {
+      width: 50%;
+      text-align: center;
+    }
+    .logo {
+      font-size: 2.5rem;
+      font-weight: 500;
+      color: var(--text-color);
+      letter-spacing: -1px;
+      margin: 0;
+      text-align: center;
+    }
+    .logo span {
+      display: inline-block;
+    }
+    .logo span:nth-child(1) { color: var(--google-red); }
+    .logo span:nth-child(2) { color: var(--google-yellow); }
+    .logo span:nth-child(3) { color: var(--primary-color); }
+    .logo span:nth-child(4) { color: var(--google-green); }
+
+    /* 邮箱输入部分 */
+    .email-input-split {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      background: #fff;
+      border: 1px solid #dfe1e5;
+      box-shadow: 0 1px 6px rgba(32, 33, 36, 0.08);
+      border-radius: 24px;
+      padding: 10px 20px;
+      transition: all 0.2s;
+    }
+    .email-input-split:focus-within {
+      box-shadow: 0 1px 10px rgba(32, 33, 36, 0.14);
+      border-color: rgba(223, 225, 229, 0);
+      outline: none;
+    }
+    .email-prefix-input {
+      border: none;
+      outline: none;
+      flex: 1;
+      font-size: 16px;
+      background: transparent;
+    }
+    .email-prefix-input::placeholder {
+      color: #aaa;
+    }
+    .email-domain-select, .email-domain-other {
+      border: none;
+      outline: none;
+      background: transparent;
+      font-size: 16px;
+      padding-left: 5px;
+    }
+    .email-domain-other {
+      display: none;
+      width: 120px;
+    }
+
+    /* 点击显示/隐藏时默认隐藏 */
+    /* .email-logo {
+      display: none; 
+    } */
+    .email-logo {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      margin-left: 5px;
+      cursor: pointer;
+    }
+
+    /* Action Buttons */
+    .buttons-container {
+      display: flex;
+      gap: 15px;
+      width: 50%;
+      justify-content: center;
+    }
+
+    /* 统一 action-btn、modal-btn 的基本样式 */
+    .action-btn,
+    .modal-btn {
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 500;
+      border: 1px solid var(--button-border);
+      transition: all 0.2s;
+      background-color: var(--button-bg); /* #f8f9fa */
+      color: var(--text-color);
+      box-shadow: 0 1px 3px rgba(32, 33, 36, 0.1);
+      text-align: center; /* 如果需要让文字居中 */
+    }
+    .action-btn:hover,
+    .modal-btn:hover {
+      border-color: var(--primary-color);
+      box-shadow: 0 2px 5px rgba(32, 33, 36, 0.15);
+      background-color: #e9ecef;
+    }
+    /* 如果有按下状态，可自行追加 */
+    .action-btn:active,
+    .modal-btn:active {
+      background-color: #e0e0e0;
+    }
+
+    /* 对于“主按钮”（例如确定）再做高亮处理 */
+    .modal-btn-primary {
+      background-color: var(--primary-color);
+      color: #fff;
+      border-color: var(--primary-color);
+    }
+    .modal-btn-primary:hover {
+      background-color: var(--primary-hover);
+    }
+    /* “次按钮” */
+    .modal-btn-secondary {
+      background-color: var(--button-bg);
+      color: var(--text-color);
+      border-color: var(--button-border);
+    }
+    .modal-btn-secondary:hover {
+      background-color: #e9ecef;
+    }
+
+    .action-btn.configured {
+      background-color: #e6f4ea;
+      border-color: #ceead6;
+    }
+
+    /* Modal styles */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s, visibility 0.3s;
+    }
+    .modal-overlay.active {
+      opacity: 1;
+      visibility: visible;
+    }
+    .modal-content {
+      background-color: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+      max-width: 600px;
+      width: 95%;
+      max-height: 85vh;
+      overflow-y: auto;
+      transform: translateY(-20px);
+      transition: transform 0.3s;
+      position: relative;
+    }
+    .modal-overlay.active .modal-content {
+      transform: translateY(0);
+    }
+    .modal-close {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      color: var(--medium-gray);
+      z-index: 10;
+      line-height: 1;
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+    }
+    .modal-close:hover {
+      background-color: var(--secondary-color);
+    }
+    .modal-body {
+      padding: 15px 0;
+    }
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 30px;
+      padding-top: 15px;
+      border-top: 1px solid var(--light-gray);
+    }
+
+    /* 发送选项 */
+    .send-options {
+      display: flex;
+      gap: 20px;
+      margin: 20px 0 30px;
+    }
+    .send-option {
+      flex: 1;
+      padding: 25px;
+      border: 1px solid var(--button-border);
+      border-radius: 12px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      background-color: var(--button-bg);
+    }
+    .send-option:hover {
+      border-color: var(--primary-color);
+      background-color: #f8fbff;
+      box-shadow: 0 2px 8px rgba(32, 33, 36, 0.1);
+    }
+    .send-option.selected {
+      border-color: var(--primary-color);
+      background-color: #f8fbff;
+      box-shadow: 0 2px 8px rgba(32, 33, 36, 0.1);
+    }
+    .send-option i {
+      font-size: 2.5rem;
+      display: block;
+      margin-bottom: 15px;
+      color: var(--primary-color);
+    }
+    .send-option h4 {
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+    .send-option p {
+      color: var(--medium-gray);
+      margin: 0;
+    }
+
+    /* 倒计时相关 */
+    .countdown-container {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      padding: 30px 0;
+    }
+    .countdown-container.active {
+      display: flex;
+    }
+    .timer-section {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 25px;
+      margin-bottom: 20px;
+      width: 100%;
+    }
+    .circle-timer {
+      position: relative;
+      width: 240px;
+      height: 240px;
+      max-width: 100%;
+      max-height: 100%;
+    }
+    .circle-background {
+      fill: none;
+      stroke: #f0f0f0;
+      stroke-width: 12px;
+    }
+    .circle-progress {
+      fill: none;
+      stroke: var(--primary-color);
+      stroke-width: 12px;
+      stroke-linecap: round;
+      transform: rotate(-90deg);
+      transform-origin: 50% 50%;
+      transition: stroke-dashoffset 1s linear;
+    }
+    .timer-text {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 2.5rem;
+      font-weight: 500;
+      color: var(--text-color);
+    }
+    .stop-timer-btn {
+      background-color: var(--google-red);
+      color: white;
+      border: none;
+      padding: 15px;
+      width: 60px;
+      height: 60px;
+      border-radius: 8px;
+      font-size: 24px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .stop-timer-btn:hover {
+      background-color: #d32f2f;
+    }
+
+    /* 定时发送时间选择 */
+    .schedule-container {
+      display: none;
+      margin-top: 20px;
+    }
+    .schedule-container.active {
+      display: block;
+    }
+
+    /* 发送成功提示 */
+    .success-container {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      text-align: center;
+      gap: 20px;
+    }
+    .success-container.active {
+      display: flex;
+    }
+    .success-box {
+      padding: 20px 30px;
+      border: 1px solid var(--button-border);
+      border-radius: 12px;
+      background-color: var(--button-bg);
+      max-width: 400px;
+    }
+    .success-title {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+    .success-message {
+      font-size: 1rem;
+      margin-bottom: 20px;
+    }
+    .success-btn {
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 500;
+      border: 1px solid var(--primary-color);
+      color: var(--primary-color);
+      background: #fff;
+      transition: background-color 0.2s, color 0.2s;
+    }
+    .success-btn:hover {
+      background-color: var(--primary-color);
+      color: #fff;
+    }
+
+    /* 移动端适配 */
+    @media (max-width: 768px) {
+      .main-container {
+        padding: 15px;
+        gap: 20px;
+      }
+      .logo-container {
+        width: 80%;
+      }
+      .logo {
+        font-size: 2rem;
+      }
+      .buttons-container {
+        width: 90%;
+      }
+      .send-options {
+        flex-direction: column;
+      }
+      /* 让倒计时/停止键垂直排布，避免错位 */
+      .timer-section {
+        flex-direction: column; 
+        align-items: center;
+        justify-content: center;
+        gap: 20px;
+      }
+      .circle-timer {
+        width: 180px;
+        height: 180px;
+      }
+      .timer-text {
+        font-size: 1.8rem;
+      }
+      .stop-timer-btn {
+        width: 50px;
+        height: 50px;
+        font-size: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="main-container">
+    <!-- Logo -->
+    <div class="logo-container">
+      <h1 class="logo">
+        <span>L</span><span>i</span><span>g</span><span>ht</span>-mail
+      </h1>
+    </div>
+    
+    <!-- Email 输入 (拆分前缀和后缀) -->
+    <div class="search-input-container w-100">
+      <div class="email-input-split">
+        <input type="text" id="email-prefix" class="email-prefix-input" placeholder="邮箱前缀" />
+        <span>@</span>
+        <select id="email-domain" class="email-domain-select">
+          <option value="gmail.com">gmail.com</option>
+          <option value="icloud.com">icloud.com</option>
+          <option value="qq.com">qq.com</option>
+          <option value="sina.cn">sina.cn</option>
+          <option value="163.com">163.com</option>
+          <option value="126.com">126.com</option>
+          <option value="outlook.com">outlook.com</option>
+          <option value="hotmail.com">hotmail.com</option>
+          <option value="live.cn">live.cn</option>
+          <option value="yahoo.com">yahoo.com</option>
+          <option value="139.com">139.com</option>
+          <option value="wo.cn">wo.cn</option>
+          <option value="Yandex.com">Yandex.com</option>
+          <option value="other">其他...</option>
+        </select>
+        <input type="text" id="email-domain-other" class="email-domain-other" placeholder="请输入邮箱后缀" />
+        <!-- 可点击的邮箱LOGO -->
+        <div class="email-logo" id="email-logo" title="点击切换邮箱后缀选择">
+          <i class="bi bi-envelope-fill"></i>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Action Buttons -->
+    <div class="buttons-container">
+      <div id="send-btn" class="action-btn">发送确定</div>
+      <div id="prompt-btn" class="action-btn">Prompt</div>
+    </div>
+  </div>
+  
+  <!-- 发送选项模态框 -->
+  <div id="send-modal" class="modal-overlay">
+    <div class="modal-content">
+      <button class="modal-close" data-modal-close="send-modal">&times;</button>
+      <div class="modal-body" id="send-options-container">
+
+        <!-- 发送选项：立即 or 定时 -->
+        <div class="send-options" id="send-options-select">
+          <div class="send-option" id="send-now-option">
+            <i class="bi bi-send"></i>
+            <h4>立即发送</h4>
+            <p>倒计时10秒后发送</p>
+          </div>
+          <div class="send-option" id="schedule-option">
+            <i class="bi bi-clock"></i>
+            <h4>定时发送</h4>
+            <p>选择具体时间后发送</p>
+          </div>
+        </div>
+
+        <!-- 定时发送：滚轮选择时间 + 重复选项 -->
+        <div class="schedule-container" id="schedule-container">
+          <div class="form-group">
+            <label for="schedule-time" class="form-label">选择发送时间（滚轮模拟）</label>
+            <input type="time" id="schedule-time" class="form-control" value="08:00">
+          </div>
+          <div class="form-group">
+            <label for="repeat-option" class="form-label">重复选项</label>
+            <select id="repeat-option" class="form-select">
+              <option value="none">不重复</option>
+              <option value="daily">每日</option>
+              <option value="weekly">每周</option>
+              <option value="monthly">每月</option>
+            </select>
+          </div>
+          <button class="modal-btn modal-btn-primary w-100" id="confirm-schedule-btn">确定时间</button>
+        </div>
+
+        <!-- 倒计时显示 -->
+        <div class="countdown-container" id="countdown-container">
+          <div class="timer-section">
+            <div class="circle-timer">
+              <svg width="240" height="240" viewBox="0 0 240 240">
+                <circle class="circle-background" cx="120" cy="120" r="108"></circle>
+                <circle class="circle-progress" cx="120" cy="120" r="108" stroke-dasharray="678" stroke-dashoffset="0"></circle>
+              </svg>
+              <div class="timer-text" id="timer-display">10</div>
+            </div>
+            <button class="stop-timer-btn" id="stop-timer-btn" title="停止倒计时">
+              <i class="bi bi-stop-fill"></i>
+            </button>
+          </div>
+          <div style="text-align:center;">
+            <p id="countdown-info" style="color: var(--medium-gray); font-size: 15px;">正在等待发送...</p>
+          </div>
+        </div>
+
+        <!-- 发送成功提示 -->
+        <div class="success-container" id="success-container">
+          <div class="success-box">
+            <div class="success-title">邮件发送成功</div>
+            <div class="success-message">已成功发送至收件人邮箱！</div>
+            <button class="success-btn" id="success-confirm-btn">好的</button>
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-footer" id="send-modal-footer">
+        <button class="modal-btn modal-btn-secondary" data-modal-close="send-modal">关闭</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Prompt 模态框 -->
+  <div id="prompt-modal" class="modal-overlay">
+    <div class="modal-content">
+      <button class="modal-close" data-modal-close="prompt-modal">&times;</button>
+      <div class="modal-body">
+        
+        <!-- Prompt 滚轮选择：10年后自己 / 亲人 / 偶像 -->
+        <div class="form-group">
+          <label for="prompt-type" class="form-label">请选择一个场景（滚轮模拟）</label>
+          <select id="prompt-type" class="form-select">
+            <option value="future-self">10年后的自己</option>
+            <option value="family">亲人</option>
+            <option value="idol">偶像</option>
+          </select>
+        </div>
+
+        <!-- 10年后自己 -->
+        <div id="future-self-form" class="prompt-details" style="display:block;">
+          <div class="row">
+            <div class="col-12 col-md-4 mb-3">
+              <label for="future-gender" class="form-label">性别</label>
+              <select class="form-select" id="future-gender">
+                <option value="男">男</option>
+                <option value="女">女</option>
+              </select>
+            </div>
+            <div class="col-12 col-md-4 mb-3">
+              <label for="future-age" class="form-label">年龄</label>
+              <input type="number" class="form-control" id="future-age" value="35" min="1" max="120">
+            </div>
+            <div class="col-12 col-md-4 mb-3">
+              <label for="future-occupation" class="form-label">职业</label>
+              <input type="text" class="form-control" id="future-occupation" value="程序员">
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-12 mb-3">
+              <label for="future-other" class="form-label">其他信息（选填）</label>
+              <input type="text" class="form-control" id="future-other" placeholder="其他想要添加的身份信息">
+            </div>
+          </div>
+        </div>
+
+        <!-- 亲人 -->
+        <div id="family-form" class="prompt-details" style="display:none;">
+          <div class="row">
+            <div class="col-12 col-md-4 mb-3">
+              <label for="family-gender" class="form-label">性别</label>
+              <select class="form-select" id="family-gender">
+                <option value="女">女</option>
+                <option value="男">男</option>
+              </select>
+            </div>
+            <div class="col-12 col-md-4 mb-3">
+              <label for="family-age" class="form-label">年龄</label>
+              <input type="number" class="form-control" id="family-age" value="17" min="1" max="120">
+            </div>
+            <div class="col-12 col-md-4 mb-3">
+              <label for="family-occupation" class="form-label">职业</label>
+              <input type="text" class="form-control" id="family-occupation" value="学生">
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-12 col-md-6 mb-3">
+              <label for="family-relative" class="form-label">亲人身份</label>
+              <input type="text" class="form-control" id="family-relative" value="奶奶">
+            </div>
+            <div class="col-12 col-md-6 mb-3">
+              <label for="family-other" class="form-label">其他信息（选填）</label>
+              <input type="text" class="form-control" id="family-other" placeholder="其他想要添加的身份信息">
+            </div>
+          </div>
+        </div>
+
+        <!-- 偶像 -->
+        <div id="idol-form" class="prompt-details" style="display:none;">
+          <div class="row">
+            <div class="col-12 col-md-4 mb-3">
+              <label for="idol-gender" class="form-label">性别</label>
+              <select class="form-select" id="idol-gender">
+                <option value="男">男</option>
+                <option value="女">女</option>
+              </select>
+            </div>
+            <div class="col-12 col-md-4 mb-3">
+              <label for="idol-age" class="form-label">年龄</label>
+              <input type="number" class="form-control" id="idol-age" value="16" min="1" max="120">
+            </div>
+            <div class="col-12 col-md-4 mb-3">
+              <label for="idol-occupation" class="form-label">职业</label>
+              <input type="text" class="form-control" id="idol-occupation" value="学生">
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-12 col-md-6 mb-3">
+              <label for="idol-name" class="form-label">偶像</label>
+              <input type="text" class="form-control" id="idol-name" value="华语歌坛创作型歌手周杰伦">
+            </div>
+            <div class="col-12 col-md-6 mb-3">
+              <label for="idol-other" class="form-label">其他信息（选填）</label>
+              <input type="text" class="form-control" id="idol-other" placeholder="其他想要添加的身份信息">
+            </div>
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn modal-btn-secondary" data-modal-close="prompt-modal">取消</button>
+        <button id="confirm-prompt-btn" class="modal-btn modal-btn-primary">确定</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log("页面DOM加载完成，开始初始化...");
+
+      // 初始化 EmailJS（仅示例）
+      emailjs.init("mP4dVhaS-uy0wgayH");
+
+      // -------------- DOM 元素获取 ----------------
+      const emailPrefixInput = document.getElementById('email-prefix');
+      const emailDomainSelect = document.getElementById('email-domain');
+      const emailDomainOther = document.getElementById('email-domain-other');
+      const emailLogo = document.getElementById('email-logo');
+
+      const sendBtn = document.getElementById('send-btn');
+      const promptBtn = document.getElementById('prompt-btn');
+
+      // 发送模态框
+      const sendModal = document.getElementById('send-modal');
+      const sendNowOption = document.getElementById('send-now-option');
+      const scheduleOption = document.getElementById('schedule-option');
+      const sendOptionsSelect = document.getElementById('send-options-select');
+      const scheduleContainer = document.getElementById('schedule-container');
+      const scheduleTimeInput = document.getElementById('schedule-time');
+      const repeatOptionSelect = document.getElementById('repeat-option');
+      const confirmScheduleBtn = document.getElementById('confirm-schedule-btn');
+
+      const countdownContainer = document.getElementById('countdown-container');
+      const timerDisplay = document.getElementById('timer-display');
+      const circleProgress = document.querySelector('.circle-progress');
+      const stopTimerBtn = document.getElementById('stop-timer-btn');
+      const countdownInfo = document.getElementById('countdown-info');
+      const successContainer = document.getElementById('success-container');
+      const successConfirmBtn = document.getElementById('success-confirm-btn');
+
+      // Prompt 模态框
+      const promptModal = document.getElementById('prompt-modal');
+      const promptTypeSelect = document.getElementById('prompt-type');
+      const confirmPromptBtn = document.getElementById('confirm-prompt-btn');
+
+      // 三种表单
+      const futureSelfForm = document.getElementById('future-self-form');
+      const familyForm = document.getElementById('family-form');
+      const idolForm = document.getElementById('idol-form');
+
+      // -------------- 逻辑状态变量 ----------------
+      let promptConfigured = false;  // 是否完成 Prompt 设置
+      let countdownInterval = null;  // 倒计时 interval
+      let currentTask = null;        // 当前任务对象 { mode, endTime, repeat, ... }
+
+      const LS_KEY = 'lightMailTask'; // localStorage key
+
+      // -------------- 点击邮箱图标：切换下拉框显示 ----------------
+      emailLogo.addEventListener('click', function() {
+        if (emailDomainSelect.style.display === 'none') {
+          emailDomainSelect.style.display = 'inline-block';
+          emailDomainOther.style.display = 'none';
+        } else {
+          emailDomainSelect.style.display = 'none';
+        }
+      });
+	    // 当用户选择 "other" 时，显示手动输入框
+	emailDomainSelect.addEventListener('change', function() {
+ 	 if (this.value === 'other') {
+   	 emailDomainSelect.style.display = 'none';
+   	 emailDomainOther.style.display = 'inline-block';
+   	 emailDomainOther.focus();
+ 	 } else {
+   	 // 当选中其他选项时，隐藏手动输入框
+   	 emailDomainOther.style.display = 'none';
+ 	 }
+	});
+
+	// 修改 email-logo 点击事件：点击时始终显示下拉选择、隐藏手动输入
+	 emailLogo.addEventListener('click', function() {
+ 	 emailDomainSelect.style.display = 'inline-block';
+ 	 emailDomainOther.style.display = 'none';
+	});
+
+      // -------------- Prompt 选择逻辑 ----------------
+      promptTypeSelect.addEventListener('change', function() {
+        const val = this.value;
+        futureSelfForm.style.display = 'none';
+        familyForm.style.display = 'none';
+        idolForm.style.display = 'none';
+        if (val === 'future-self') futureSelfForm.style.display = 'block';
+        else if (val === 'family') familyForm.style.display = 'block';
+        else if (val === 'idol') idolForm.style.display = 'block';
+      });
+
+      // -------------- 打开/关闭模态框通用函数 ----------------
+      function openModal(modal, lockScroll = true) {
+        modal.classList.add('active');
+        if(lockScroll) {
+          document.body.style.overflow = 'hidden';
+        }
+      }
+      function closeModal(modal) {
+        modal.classList.remove('active');
+        document.body.style.overflow = '';
+      }
+      const modalCloseButtons = document.querySelectorAll('[data-modal-close]');
+      modalCloseButtons.forEach(btn => {
+        btn.addEventListener('click', function() {
+          const modalId = this.getAttribute('data-modal-close');
+          closeModal(document.getElementById(modalId));
+        });
+      });
+      [sendModal, promptModal].forEach(m => {
+        m.addEventListener('click', function(e) {
+          if (e.target === this) {
+            closeModal(this);
+          }
+        });
+      });
+
+      // -------------- Prompt 按钮 ----------------
+      promptBtn.addEventListener('click', function() {
+        openModal(promptModal);
+      });
+      confirmPromptBtn.addEventListener('click', function() {
+        promptConfigured = true;
+        promptBtn.classList.add('configured');
+        closeModal(promptModal);
+      });
+
+      // -------------- 打开发送模态框 ----------------
+      sendBtn.addEventListener('click', function() {
+        if (!promptConfigured) {
+          alert("请先设置 Prompt！");
+          return;
+        }
+        // 检查邮箱输入
+        const prefix = emailPrefixInput.value.trim();
+        let domain = emailDomainSelect.value;
+        if (domain === 'other') {
+          domain = emailDomainOther.value.trim();
+        }
+        if (!prefix || !domain) {
+          alert("请完整输入收件邮箱！");
+          return;
+        }
+        // 打开发送模态框
+        openModal(sendModal);
+
+        // 若无本地任务，则重置，否则恢复
+        const existingTask = loadTaskFromStorage();
+        if(!existingTask) {
+          resetSendModal();
+        }
+      });
+
+      // -------------- 发送选项逻辑 ----------------
+      sendNowOption.addEventListener('click', function() {
+        // 隐藏选项，开始 10 秒倒计时
+        sendOptionsSelect.style.display = 'none';
+        scheduleContainer.classList.remove('active');
+        countdownContainer.classList.add('active');
+
+        // 写入任务
+        const endTime = Date.now() + (10 * 1000);
+        currentTask = { mode: 'immediate', endTime, repeat: 'none' };
+        saveTaskToStorage(currentTask);
+
+        startCountdown(10, true);
+      });
+
+      scheduleOption.addEventListener('click', function() {
+        sendOptionsSelect.style.display = 'none';
+        scheduleContainer.classList.add('active');
+      });
+
+      confirmScheduleBtn.addEventListener('click', function() {
+        const now = new Date();
+        const timeVal = scheduleTimeInput.value; // HH:MM
+        const [hh, mm] = timeVal.split(':').map(Number);
+
+        let scheduleDate = new Date();
+        scheduleDate.setHours(hh, mm, 0, 0);
+        if (scheduleDate < now) {
+          scheduleDate.setDate(scheduleDate.getDate() + 1);
+        }
+        currentTask = {
+          mode: 'schedule',
+          endTime: scheduleDate.getTime(),
+          repeat: repeatOptionSelect.value 
+        };
+        saveTaskToStorage(currentTask);
+
+        scheduleContainer.classList.remove('active');
+        countdownContainer.classList.add('active');
+        countdownInfo.textContent = 将于 ${scheduleDate.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})} 发送;
+
+        const diff = Math.floor((scheduleDate.getTime() - Date.now())/1000);
+        startTimeCountdown(diff);
+      });
+
+      // 停止倒计时
+      stopTimerBtn.addEventListener('click', function() {
+        stopCurrentTask("已停止倒计时，本次发送取消。");
+      });
+      function stopCurrentTask(tipMsg="") {
+        if (countdownInterval) clearInterval(countdownInterval);
+        clearTaskInStorage();
+        if(tipMsg) alert(tipMsg);
+        resetSendModal();
+      }
+
+      // 发送成功提示 “好的” 按钮
+      successConfirmBtn.addEventListener('click', function() {
+        resetSendModal();
+        closeModal(sendModal);
+      });
+
+      // -------------- 倒计时功能 ----------------
+      function startCountdown(seconds, isImmediate) {
+        timerDisplay.textContent = seconds;
+        let remaining = seconds;
+        updateCircle(remaining, seconds);
+
+        countdownInterval = setInterval(function() {
+          remaining--;
+          if (remaining <= 0) {
+            clearInterval(countdownInterval);
+            doSendEmail(isImmediate);
+            return;
+          }
+          timerDisplay.textContent = remaining;
+          updateCircle(remaining, seconds);
+        }, 1000);
+      }
+      function startTimeCountdown(diff) {
+        const totalDiff = diff;
+        timerDisplay.textContent = formatTimeDiff(diff);
+        updateCircle(diff, totalDiff);
+
+        countdownInterval = setInterval(function() {
+          diff--;
+          if (diff <= 0) {
+            clearInterval(countdownInterval);
+            doSendEmail(false);
+            return;
+          }
+          timerDisplay.textContent = formatTimeDiff(diff);
+          updateCircle(diff, totalDiff);
+        }, 1000);
+      }
+      function formatTimeDiff(diff) {
+        let d = Math.floor(diff);
+        let h = Math.floor(d / 3600);
+        d %= 3600;
+        let m = Math.floor(d / 60);
+        let s = Math.floor(d % 60);
+        return ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')};
+      }
+      function updateCircle(remaining, total) {
+        const circumference = 678; 
+        if (remaining < 0) remaining = 0;
+        const progress = remaining / total;
+        const dashOffset = circumference * (1 - progress);
+        circleProgress.style.strokeDashoffset = dashOffset;
+      }
+
+      // 执行发送
+      async function doSendEmail(isImmediate) {
+        countdownContainer.classList.remove('active');
+        successContainer.classList.add('active');
+
+        const fullEmail = getFullEmail();
+        const promptInfo = getPromptInfo();
+        const aiContent = await generateContent(promptInfo.promptText);
+        if (!aiContent) {
+          console.log("AI生成内容失败，终止发送。");
+          alert("AI内容生成失败，邮件未发送。");
+          stopCurrentTask("");
+          return;
+        }
+        await sendEmail(promptInfo.subject, aiContent, fullEmail);
+
+        if(currentTask && currentTask.repeat && currentTask.repeat !== 'none') {
+          // 计算下次发送时间
+          let nextTime = currentTask.endTime;
+          const oldDate = new Date(nextTime);
+          if(currentTask.repeat === 'daily') {
+            oldDate.setDate(oldDate.getDate() + 1);
+          } else if(currentTask.repeat === 'weekly') {
+            oldDate.setDate(oldDate.getDate() + 7);
+          } else if(currentTask.repeat === 'monthly') {
+            oldDate.setMonth(oldDate.getMonth() + 1);
+          }
+          currentTask.endTime = oldDate.getTime();
+          saveTaskToStorage(currentTask);
+        } else {
+          // 一次性任务完成
+          clearTaskInStorage();
+        }
+      }
+
+      // 获取完整收件邮箱
+      function getFullEmail() {
+        const prefix = emailPrefixInput.value.trim();
+        let domain = emailDomainSelect.value;
+        if (domain === 'other') {
+          domain = emailDomainOther.value.trim();
+        }
+        return prefix + '@' + domain;
+      }
+      // Prompt信息 -> 构造AI提示
+      function getPromptInfo() {
+        const type = promptTypeSelect.value;
+        let subject = "";
+        let promptText = "";
+        const dateString = new Date().toLocaleDateString();
+        if (type === 'future-self') {
+          const gender = document.getElementById('future-gender').value;
+          const age = document.getElementById('future-age').value;
+          const occ = document.getElementById('future-occupation').value;
+          const other = document.getElementById('future-other').value;
+          subject = "来自未来的你的信 - " + dateString;
+          promptText = 
+            你是一个专业的谈判专家和心理医生，写一封约300汉字的鼓励信给过去的自己， +
+            要求开头为"致过去的我："，结尾为"未来的你"，内容轻松自然。\n +
+            背景信息：性别=${gender}，年龄=${age}，职业=${occ}，其他=${other};
+        }
+        else if (type === 'family') {
+          const relative = document.getElementById('family-relative').value;
+          const gender = document.getElementById('family-gender').value;
+          const age = document.getElementById('family-age').value;
+          const occ = document.getElementById('family-occupation').value;
+          const other = document.getElementById('family-other').value;
+          subject = 来自${relative}的一封信 - ${dateString};
+          promptText = 
+            你是一个充满关爱的家人，请以"致囡囡："开头写一封约300汉字的鼓励信给过去的自己，结尾为"最爱你的${relative}"。\n +
+            背景信息：性别=${gender}，年龄=${age}，职业=${occ}，其他=${other};
+        }
+        else {
+          const idolName = document.getElementById('idol-name').value;
+          const gender = document.getElementById('idol-gender').value;
+          const age = document.getElementById('idol-age').value;
+          const occ = document.getElementById('idol-occupation').value;
+          const other = document.getElementById('idol-other').value;
+          subject = 来自${idolName}的一封信 - ${dateString};
+          promptText = 
+            请以偶像的口吻写一封约300汉字的鼓励信，开头为"致${occ}："，结尾为"${idolName}"。\n +
+            背景信息：性别=${gender}，年龄=${age}，其他=${other};
+        }
+        return { subject, promptText };
+      }
+
+      // 调用 AI 接口生成信件内容（示例为流式接口）
+      async function generateContent(promptText) {
+        console.log("调用AI生成内容，提示：", promptText);
+        const API_SETTINGS = {
+          apiKey: 'ali-sk-key',  
+          apiUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
+          apiModel: 'qwq-plus'
+        };
+        const payload = {
+          model: API_SETTINGS.apiModel,
+          messages: [{ role: 'user', content: promptText }],
+          temperature: 0.7,
+          max_tokens: 600,
+          stream: true
+        };
+        try {
+          const response = await fetch(API_SETTINGS.apiUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ' + API_SETTINGS.apiKey
+            },
+            body: JSON.stringify(payload)
+          });
+          if (!response.ok) {
+            throw new Error("AI接口请求失败: " + response.status);
+          }
+          const reader = response.body.getReader();
+          let completeContent = "";
+          while(true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            const chunk = new TextDecoder().decode(value);
+            const lines = chunk.split('\n');
+            for (const line of lines) {
+              if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+                try {
+                  const jsonStr = line.substring(6);
+                  const jsonData = JSON.parse(jsonStr);
+                  if (jsonData.choices && jsonData.choices[0].delta.content) {
+                    completeContent += jsonData.choices[0].delta.content;
+                  }
+                } catch(e) {
+                  console.log("解析流数据出错:", e, line);
+                }
+              }
+            }
+          }
+          return completeContent;
+        } catch (error) {
+          console.log("AI生成内容错误:", error);
+          alert("AI生成内容失败：" + error.message);
+          return "";
+        }
+      }
+
+      // 邮件发送
+      async function sendEmail(subject, content, receiver) {
+        console.log("开始发送邮件：", receiver);
+        const htmlContent = <div style="font-family: Arial, sans-serif; line-height:1.6;">${content.replace(/\n/g, '<br>')}</div>;
+        const templateParams = {
+          to_email: receiver,
+          subject: subject,
+          message: htmlContent
+        };
+        try {
+          const resp = await emailjs.send("service_demo_id", "template_demo_id", templateParams);
+          console.log("邮件发送成功：", resp.text);
+        } catch (err) {
+          console.log("邮件发送失败：", err);
+          alert("邮件发送失败：" + err);
+        }
+      }
+
+      // -------------- 本地存储 --------------
+      function loadTaskFromStorage() {
+        const raw = localStorage.getItem(LS_KEY);
+        if(!raw) return null;
+        try { return JSON.parse(raw); } 
+        catch(e) { console.warn("加载本地任务错误:", e); return null; }
+      }
+      function saveTaskToStorage(task) {
+        localStorage.setItem(LS_KEY, JSON.stringify(task));
+      }
+      function clearTaskInStorage() {
+        localStorage.removeItem(LS_KEY);
+      }
+
+      // 页面加载检查是否有未完成任务
+      window.addEventListener('load', () => {
+        const savedTask = loadTaskFromStorage();
+        if(!savedTask) {
+          console.log("本地无未完成任务。");
+          return;
+        }
+        console.log("检测到本地任务:", savedTask);
+        currentTask = savedTask;
+        promptConfigured = true;
+        promptBtn.classList.add('configured');
+
+        // 打开发送模态框并恢复倒计时界面
+        openModal(sendModal, false);
+        sendOptionsSelect.style.display = 'none';
+        scheduleContainer.classList.remove('active');
+        successContainer.classList.remove('active');
+        countdownContainer.classList.add('active');
+
+        if(currentTask.mode === 'immediate') {
+          resumeImmediateCountdown(currentTask);
+        } else {
+          resumeScheduledCountdown(currentTask);
+        }
+      });
+
+      function resumeImmediateCountdown(task) {
+        const now = Date.now();
+        const diff = Math.floor((task.endTime - now)/1000);
+        if(diff <= 0) {
+          doSendEmail(true);
+        } else {
+          countdownInfo.textContent = "即将发送...";
+          startCountdown(diff, true);
+        }
+      }
+      function resumeScheduledCountdown(task) {
+        const now = Date.now();
+        const diff = Math.floor((task.endTime - now)/1000);
+        if(diff <= 0) {
+          doSendEmail(false);
+        } else {
+          const futureDate = new Date(task.endTime);
+          countdownInfo.textContent = 将于 ${futureDate.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})} 发送;
+          startTimeCountdown(diff);
+        }
+      }
+
+      // 重置发送模态框
+      function resetSendModal() {
+        if (countdownInterval) clearInterval(countdownInterval);
+        sendOptionsSelect.style.display = 'flex';
+        scheduleContainer.classList.remove('active');
+        countdownContainer.classList.remove('active');
+        successContainer.classList.remove('active');
+        timerDisplay.textContent = '10';
+        circleProgress.style.strokeDashoffset = '0';
+        countdownInfo.textContent = "正在等待发送...";
+        scheduleTimeInput.value = '08:00';
+        repeatOptionSelect.value = 'none';
+      }
+    });
+  </script>
+</body>
+</html>
