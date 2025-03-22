@@ -1,13 +1,22 @@
 {
   "name": "lightmail",
   "version": "1.0.0",
-  "description": "Cloudflare Pages project with Pages Functions",
+  "description": "A web application using Cloudflare Pages Functions to securely call AI content generation APIs",
+  "main": "index.html",
   "scripts": {
-    "build": "echo '静态页面，无需构建' && exit 0",
-    "dev": "wrangler pages dev"
+    "dev": "wrangler pages dev",
+    "build": "echo 'No build step needed for static site'"
   },
-  "dependencies": {},
+  "dependencies": {
+    "wrangler": "^3.0.0"
+  },
   "devDependencies": {
-    "wrangler": "^2.14.0"
-  }
+    "@cloudflare/workers-types": "^4.20231218.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=16.13.0"
+  },
+  "author": "",
+  "license": "MIT"
 }
