@@ -1,7 +1,7 @@
 {
-  "name": "worker-name",
+  "name": "lightmail",
   "compatibility_date": "2025-03-22",
   "assets": {
-    "directory": "./dist"
+    "directory": "./"
   }
 }
