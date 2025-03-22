@@ -1,5 +1,7 @@
 {
   "name": "worker-name",
   "compatibility_date": "2025-03-22",
-  "main": "src/index.ts"
+  "assets": {
+    "directory": "./dist"
+  }
 }
