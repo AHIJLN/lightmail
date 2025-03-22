@@ -26,9 +26,26 @@ export async function onRequest(context) {
     
     // 如果是流式响应，需要特殊处理
     if (requestData.stream) {
-      // 创建一个新的 ReadableStream 来转发响应
-      const { readable, writable } = new TransformStream();
-      response.body.pipeTo(writable);
+      // 创建一个自定义的转换流，确保每个数据块都是完整的 JSON
+      const { readable, writable } = new TransformStream({
+        transform(chunk, controller) {
+          // 将 Uint8Array 转换为字符串
+          const text = new TextDecoder().decode(chunk);
+          
+          // 处理数据块，确保每行都是有效的 SSE 格式
+          const lines = text.split('\n');
+          
+          for (const line of lines) {
+            if (line.trim().length > 0) {
+              // 只发送有效的数据行
+              controller.enqueue(new TextEncoder().encode(`data: ${line}\n\n`));
+            }
+          }
+        }
+      });
+      
+      // 将原始响应通过转换流传递
+      response.body.pipeTo(writable).catch(err => console.error('Stream error:', err));
       
       return new Response(readable, {
         headers: {
