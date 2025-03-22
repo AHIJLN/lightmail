@@ -1,5 +1,13 @@
 {
+  "name": "lightmail",
+  "version": "1.0.0",
+  "description": "Cloudflare Pages project with Pages Functions",
   "scripts": {
-    "build": "mkdir -p dist && cp index.html dist/ && node build.js"
+    "build": "echo '静态页面，无需构建' && exit 0",
+    "dev": "wrangler pages dev"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "wrangler": "^2.14.0"
   }
 }
