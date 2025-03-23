@@ -24,22 +24,12 @@ export async function onRequest(context) {
       body: JSON.stringify(requestData)
     });
     
-    // 如果是流式响应，直接传递流
+    // 如果是流式响应
     if (requestData.stream) {
-      // 创建一个转换流，直接传递JSON数据而不是SSE格式
-      const { readable, writable } = new TransformStream({
-        transform(chunk, controller) {
-          // 将原始数据直接传递
-          controller.enqueue(chunk);
-        }
-      });
-      
-      // 将原始响应通过转换流传递
-      response.body.pipeTo(writable).catch(err => console.error('Stream error:', err));
-      
-      return new Response(readable, {
+      // 直接将上游API的响应传递给客户端
+      return new Response(response.body, {
         headers: {
-          "Content-Type": "application/octet-stream",
+          "Content-Type": "application/json",
           "Cache-Control": "no-cache",
           "Connection": "keep-alive"
         }
