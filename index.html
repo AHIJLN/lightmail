@@ -1104,45 +1104,52 @@ async function generateContent(promptText) {
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let completeContent = "";
-    let buffer = ""; // 用于存储不完整的JSON片段
+    let partialLine = "";
     
+    // 处理流数据的函数
+    const processJSON = (jsonString) => {
+      try {
+        const jsonData = JSON.parse(jsonString);
+        if (jsonData.choices && jsonData.choices[0].delta && jsonData.choices[0].delta.content) {
+          return jsonData.choices[0].delta.content;
+        }
+      } catch (e) {
+        // 忽略解析错误
+      }
+      return "";
+    };
+
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
       
-      // 解码当前块并添加到缓冲区
+      // 解码当前块
       const chunk = decoder.decode(value, { stream: true });
-      buffer += chunk;
       
-      // 处理JSON数据，查找完整的JSON对象
-      let startPos = 0;
-      let endPos;
+      // 处理分行数据（每行应该是一个JSON对象）
+      const lines = (partialLine + chunk).split('\n');
+      partialLine = lines.pop() || ""; // 最后一行可能是不完整的
       
-      while ((endPos = buffer.indexOf("}", startPos)) !== -1) {
-        endPos++; // 包含 "}"
-        
-        try {
-          // 尝试解析可能的JSON对象
-          const jsonStr = buffer.substring(startPos, endPos);
-          const jsonData = JSON.parse(jsonStr);
-          
-          // 如果成功解析，处理数据
-          if (jsonData.choices && jsonData.choices[0].delta && jsonData.choices[0].delta.content) {
-            completeContent += jsonData.choices[0].delta.content;
+      for (const line of lines) {
+        if (line.trim()) {
+          const content = processJSON(line);
+          if (content) {
+            completeContent += content;
+            // 可以在这里添加UI更新逻辑，如实时显示内容
+            // updateUI(completeContent);
           }
-          
-          // 移动到下一个可能的JSON对象
-          startPos = endPos;
-        } catch (e) {
-          // 如果当前位置不是完整的JSON，尝试下一个 "}" 位置
-          startPos = buffer.indexOf("{", startPos);
-          if (startPos === -1) break;
         }
       }
       
-      // 保留未处理的部分
-      if (startPos > 0) {
-        buffer = buffer.substring(startPos);
+      // 避免长时间阻塞主线程
+      await new Promise(resolve => setTimeout(resolve, 0));
+    }
+    
+    // 处理最后可能的部分行
+    if (partialLine.trim()) {
+      const content = processJSON(partialLine);
+      if (content) {
+        completeContent += content;
       }
     }
 
