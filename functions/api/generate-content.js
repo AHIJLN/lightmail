@@ -24,12 +24,11 @@ export async function onRequest(context) {
       body: JSON.stringify(requestData)
     });
     
-    // 如果是流式响应
+    // 如果是流式响应，直接传递阿里云的流式响应
     if (requestData.stream) {
-      // 直接将上游API的响应传递给客户端
       return new Response(response.body, {
         headers: {
-          "Content-Type": "application/json",
+          "Content-Type": "text/event-stream",
           "Cache-Control": "no-cache",
           "Connection": "keep-alive"
         }
