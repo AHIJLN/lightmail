@@ -1104,14 +1104,15 @@ async function generateContent(promptText) {
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let completeContent = "";
-    
+    let buffer = ""; // 用于拼接不完整的JSON数据
+
     while (true) {
-      const { done, value } = await reader.read();
+      const { done, value } = await reader.read(); // 读取流数据
       if (done) break;
-      
+
       // 解码当前块
       const chunk = decoder.decode(value, { stream: true });
-      
+
       // 处理SSE格式的数据
       const lines = chunk.split('\n');
       
@@ -1119,20 +1120,22 @@ async function generateContent(promptText) {
         if (line.trim().startsWith('data:')) {
           // 提取data:后面的内容
           const jsonStr = line.substring(line.indexOf('data:') + 5).trim();
-          
-          if (jsonStr === '[DONE]') continue;
-          
+
+          if (jsonStr === '[DONE]') continue; // 跳过结束标识
+
           try {
-            // 确保是完整的JSON字符串时才解析
-            if (jsonStr && jsonStr !== '') {
-              const jsonData = JSON.parse(jsonStr);
-              if (jsonData.choices && jsonData.choices[0].delta && jsonData.choices[0].delta.content) {
-                completeContent += jsonData.choices[0].delta.content;
-              }
+            // 累积数据，确保完整的 JSON 再解析
+            buffer += jsonStr; // 将当前行追加到缓冲区
+            const jsonData = JSON.parse(buffer); // 尝试解析缓冲区内容
+            buffer = ""; // 如果解析成功，清空缓冲区
+
+            // 检查解析后的数据结构
+            if (jsonData.choices && jsonData.choices[0].delta && jsonData.choices[0].delta.content) {
+              completeContent += jsonData.choices[0].delta.content;
             }
           } catch (e) {
-            console.log("解析流数据出错:", e, jsonStr);
-            // 不中断处理，继续尝试解析其他行
+            // 如果解析失败，可能是数据不完整，继续累积
+            console.log("JSON解析失败，可能数据不完整，继续累积:", e.message);
           }
         }
       }
