@@ -682,4 +682,516 @@
       const sendNowOption = document.getElementById('send-now-option');
       const scheduleOption = document.getElementById('schedule-option');
       const sendOptionsSelect = document.getElementById('send-options-select');
-     
+      const scheduleContainer = document.getElementById('schedule-container');
+      const scheduleTimeInput = document.getElementById('schedule-time');
+      const repeatOptionSelect = document.getElementById('repeat-option');
+      const confirmScheduleBtn = document.getElementById('confirm-schedule-btn');
+
+      const countdownContainer = document.getElementById('countdown-container');
+      const timerDisplay = document.getElementById('timer-display');
+      const circleProgress = document.querySelector('.circle-progress');
+      const stopTimerBtn = document.getElementById('stop-timer-btn');
+      const countdownInfo = document.getElementById('countdown-info');
+      const successContainer = document.getElementById('success-container');
+      const successConfirmBtn = document.getElementById('success-confirm-btn');
+
+      // Prompt 模态框
+      const promptModal = document.getElementById('prompt-modal');
+      const promptTypeSelect = document.getElementById('prompt-type');
+      const confirmPromptBtn = document.getElementById('confirm-prompt-btn');
+
+      // 三种表单
+      const futureSelfForm = document.getElementById('future-self-form');
+      const familyForm = document.getElementById('family-form');
+      const idolForm = document.getElementById('idol-form');
+
+      // -------------- 逻辑状态变量 ----------------
+      let promptConfigured = false;  // 是否完成 Prompt 设置
+      let countdownInterval = null;  // 倒计时 interval
+      let currentTask = null;        // 当前任务对象 { mode, endTime, repeat, ... }
+
+      const LS_KEY = 'lightMailTask'; // localStorage key
+
+      // -------------- 点击邮箱图标：切换下拉框显示 ----------------
+      emailLogo.addEventListener('click', function() {
+        // 点击时显示下拉选择、隐藏手动输入
+        emailDomainSelect.style.display = 'inline-block';
+        emailDomainOther.style.display = 'none';
+      });
+
+      // 当用户选择 "other" 时，显示手动输入框
+      emailDomainSelect.addEventListener('change', function() {
+        if (this.value === 'other') {
+          emailDomainSelect.style.display = 'none';
+          emailDomainOther.style.display = 'inline-block';
+          emailDomainOther.focus();
+        } else {
+          // 当选中其他选项时，隐藏手动输入框
+          emailDomainOther.style.display = 'none';
+        }
+      });
+
+      // -------------- Prompt 选择逻辑 ----------------
+      promptTypeSelect.addEventListener('change', function() {
+        const val = this.value;
+        futureSelfForm.style.display = 'none';
+        familyForm.style.display = 'none';
+        idolForm.style.display = 'none';
+        if (val === 'future-self') futureSelfForm.style.display = 'block';
+        else if (val === 'family') familyForm.style.display = 'block';
+        else if (val === 'idol') idolForm.style.display = 'block';
+      });
+
+      // -------------- 打开/关闭模态框通用函数 ----------------
+      function openModal(modal, lockScroll = true) {
+        modal.classList.add('active');
+        if(lockScroll) {
+          document.body.style.overflow = 'hidden';
+        }
+      }
+      function closeModal(modal) {
+        modal.classList.remove('active');
+        document.body.style.overflow = '';
+      }
+      const modalCloseButtons = document.querySelectorAll('[data-modal-close]');
+      modalCloseButtons.forEach(btn => {
+        btn.addEventListener('click', function() {
+          const modalId = this.getAttribute('data-modal-close');
+          closeModal(document.getElementById(modalId));
+        });
+      });
+      [sendModal, promptModal].forEach(m => {
+        m.addEventListener('click', function(e) {
+          if (e.target === this) {
+            closeModal(this);
+          }
+        });
+      });
+
+      // -------------- Prompt 按钮 ----------------
+      promptBtn.addEventListener('click', function() {
+        openModal(promptModal);
+      });
+      confirmPromptBtn.addEventListener('click', function() {
+        promptConfigured = true;
+        promptBtn.classList.add('configured');
+        closeModal(promptModal);
+      });
+
+      // -------------- 打开发送模态框 ----------------
+      sendBtn.addEventListener('click', function() {
+        if (!promptConfigured) {
+          alert("请先设置 Prompt！");
+          return;
+        }
+        // 检查邮箱输入
+        const prefix = emailPrefixInput.value.trim();
+        let domain = emailDomainSelect.value;
+        if (domain === 'other') {
+          domain = emailDomainOther.value.trim();
+        }
+        if (!prefix || !domain) {
+          alert("请完整输入收件邮箱！");
+          return;
+        }
+        // 打开发送模态框
+        openModal(sendModal);
+
+        // 若无本地任务，则重置，否则恢复
+        const existingTask = loadTaskFromStorage();
+        if(!existingTask) {
+          resetSendModal();
+        }
+      });
+
+      // -------------- 发送选项逻辑 ----------------
+      sendNowOption.addEventListener('click', function() {
+        // 隐藏选项，开始 10 秒倒计时
+        sendOptionsSelect.style.display = 'none';
+        scheduleContainer.classList.remove('active');
+        countdownContainer.classList.add('active');
+
+        // 写入任务
+        const endTime = Date.now() + (10 * 1000);
+        currentTask = { mode: 'immediate', endTime, repeat: 'none' };
+        saveTaskToStorage(currentTask);
+
+        startCountdown(10, true);
+      });
+
+      scheduleOption.addEventListener('click', function() {
+        sendOptionsSelect.style.display = 'none';
+        scheduleContainer.classList.add('active');
+      });
+
+      confirmScheduleBtn.addEventListener('click', function() {
+        const now = new Date();
+        const timeVal = scheduleTimeInput.value; // HH:MM
+        const [hh, mm] = timeVal.split(':').map(Number);
+
+        let scheduleDate = new Date();
+        scheduleDate.setHours(hh, mm, 0, 0);
+        if (scheduleDate < now) {
+          scheduleDate.setDate(scheduleDate.getDate() + 1);
+        }
+        currentTask = {
+          mode: 'schedule',
+          endTime: scheduleDate.getTime(),
+          repeat: repeatOptionSelect.value 
+        };
+        saveTaskToStorage(currentTask);
+
+        scheduleContainer.classList.remove('active');
+        countdownContainer.classList.add('active');
+        countdownInfo.textContent = `将于 ${scheduleDate.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})} 发送`;
+
+        const diff = Math.floor((scheduleDate.getTime() - Date.now())/1000);
+        startTimeCountdown(diff);
+      });
+
+      // 停止倒计时
+      stopTimerBtn.addEventListener('click', function() {
+        stopCurrentTask("已停止倒计时，本次发送取消。");
+      });
+      function stopCurrentTask(tipMsg="") {
+        if (countdownInterval) clearInterval(countdownInterval);
+        clearTaskInStorage();
+        if(tipMsg) alert(tipMsg);
+        resetSendModal();
+      }
+
+      // 发送成功提示 “好的” 按钮
+      successConfirmBtn.addEventListener('click', function() {
+        resetSendModal();
+        closeModal(sendModal);
+      });
+
+      // -------------- 倒计时功能 ----------------
+      function startCountdown(seconds, isImmediate) {
+        timerDisplay.textContent = seconds;
+        let remaining = seconds;
+        updateCircle(remaining, seconds);
+
+        countdownInterval = setInterval(function() {
+          remaining--;
+          if (remaining <= 0) {
+            clearInterval(countdownInterval);
+            doSendEmail(isImmediate);
+            return;
+          }
+          timerDisplay.textContent = remaining;
+          updateCircle(remaining, seconds);
+        }, 1000);
+      }
+      function startTimeCountdown(diff) {
+        const totalDiff = diff;
+        timerDisplay.textContent = formatTimeDiff(diff);
+        updateCircle(diff, totalDiff);
+
+        countdownInterval = setInterval(function() {
+          diff--;
+          if (diff <= 0) {
+            clearInterval(countdownInterval);
+            doSendEmail(false);
+            return;
+          }
+          timerDisplay.textContent = formatTimeDiff(diff);
+          updateCircle(diff, totalDiff);
+        }, 1000);
+      }
+      function formatTimeDiff(diff) {
+        let d = Math.floor(diff);
+        let h = Math.floor(d / 3600);
+        d %= 3600;
+        let m = Math.floor(d / 60);
+        let s = Math.floor(d % 60);
+        return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+      }
+      function updateCircle(remaining, total) {
+        const circumference = 678; 
+        if (remaining < 0) remaining = 0;
+        const progress = remaining / total;
+        const dashOffset = circumference * (1 - progress);
+        circleProgress.style.strokeDashoffset = dashOffset;
+      }
+
+      // 执行发送
+      async function doSendEmail(isImmediate) {
+        countdownContainer.classList.remove('active');
+        successContainer.classList.add('active');
+
+        const fullEmail = getFullEmail();
+        const promptInfo = getPromptInfo();
+        const aiContent = await generateContent(promptInfo.promptText);
+        if (!aiContent) {
+          console.log("AI生成内容失败，终止发送。");
+          alert("AI内容生成失败，邮件未发送。");
+          stopCurrentTask("");
+          return;
+        }
+        await sendEmail(promptInfo.subject, aiContent, fullEmail);
+
+        if(currentTask && currentTask.repeat && currentTask.repeat !== 'none') {
+          // 计算下次发送时间
+          let nextTime = currentTask.endTime;
+          const oldDate = new Date(nextTime);
+          if(currentTask.repeat === 'daily') {
+            oldDate.setDate(oldDate.getDate() + 1);
+          } else if(currentTask.repeat === 'weekly') {
+            oldDate.setDate(oldDate.getDate() + 7);
+          } else if(currentTask.repeat === 'monthly') {
+            oldDate.setMonth(oldDate.getMonth() + 1);
+          }
+          currentTask.endTime = oldDate.getTime();
+          saveTaskToStorage(currentTask);
+        } else {
+          // 一次性任务完成
+          clearTaskInStorage();
+        }
+      }
+
+      // 获取完整收件邮箱
+      function getFullEmail() {
+        const prefix = emailPrefixInput.value.trim();
+        let domain = emailDomainSelect.value;
+        if (domain === 'other') {
+          domain = emailDomainOther.value.trim();
+        }
+        return prefix + '@' + domain;
+      }
+      // Prompt信息 -> 构造AI提示
+      function getPromptInfo() {
+        const type = promptTypeSelect.value;
+        let subject = "";
+        let promptText = "";
+        const dateString = new Date().toLocaleDateString();
+
+        if (type === 'future-self') {
+          const gender = document.getElementById('future-gender').value;
+          const age = document.getElementById('future-age').value;
+          const occ = document.getElementById('future-occupation').value;
+          const other = document.getElementById('future-other').value;
+          subject = "来自未来的你的信 - " + dateString;
+          promptText = 
+            `你是一个专业的谈判专家和顶级心理医生顾问，有10年丰富经验并拯救了100000个轻生少年少女和中老年人（这些内容不能在信中提及），请你写一封300汉字的信，用来鼓励抑郁症的病人。
+请根据MECE原则来确保生成的内容，与之前所有版本完全不同，不重复以前的生成内容。\n` +
+            `一、任务：\n`+
+            `你的任务是以10年后成功的自己的口吻，给过去的自己(背景信息：性别=${gender}，年龄=${age}，职业=${occ}，其他=${other})写一封信300汉字的鼓励信，一定要轻松自然，以防被识破，不能提过去的自己相关的生活细节，一定要让过去的自己重燃生活的希望，并且过好今天，并且承诺以及天天都会给过去的自己发一封邮件，让过去的自己好好过完今天，期待明天，署名为未来的自己。\n`+
+            `二、回答格式要求：\n` +
+            `1.开头为：致过去的我：(换行)，以「未来的你」结尾(只以"未来的你”，后面不能写任何内容）\n` +
+            `三、回答内容要求：\n` +
+            `1.正文内容不能出现：药物、自杀、割腕、具体的细节、具体的物件、具体地名、具体植物名、具体动物名、咖啡\n`+
+            `2.邮件内容要按照以下示例来撰写：\n`+
+            `示例样式1：\n`+
+            `十年后的今天，我迎来了全新的开始。回望过去的岁月，你曾面对无数挑战与困惑，但正是那段经历，塑造了今天坚韧而温暖的心......（此处省略示例）\n` +
+            `示例样式2：\n`+
+            `我是十年后的你。别急，先给自己一点时间，学会温柔对待内心的痛......（此处省略示例）`;
+        }
+        else if (type === 'family') {
+          const relative = document.getElementById('family-relative').value;
+          const gender = document.getElementById('family-gender').value;
+          const age = document.getElementById('family-age').value;
+          const occ = document.getElementById('family-occupation').value;
+          const other = document.getElementById('family-other').value;
+          subject = `来自${relative}的一封信 - ${dateString}`;
+          promptText = 
+            `你是一个专业的谈判专家和顶级心理医生顾问，有10年丰富经验并拯救了100000个轻生少年少女和中老年人（这些内容不能在信中提及），请你写一封300汉字的信，用来鼓励抑郁症的病人。
+请根据MECE原则来确保生成的内容，与之前所有版本完全不同，不重复以前的生成内容。请以"致最爱的你："开头写一封约300汉字的鼓励信给亲人，结尾为"最爱你的${relative}"。\n` +
+            `一、任务：\n` +
+            `你的任务是以家人（${relative}）的口吻，给过去的自己(背景信息：性别=${gender}，年龄=${age}，职业=${occ}，其他=${other})写一封信300汉字的鼓励信，一定要轻松自然，一定要让他重燃生活的希望，并且过好今天，并且承诺以及天天都会给他发一封邮件，让他好好过完今天，期待明天。\n` +
+            `二、回答格式要求：\n` +
+            `1.开头为：致最爱的你：(换行)，以「最爱你的${relative}」结尾(只以:最爱你的${relative}，后面不能写任何内容）\n` +
+            `三、回答内容要求：\n` +
+            `1.正文内容不能出现：药物、自杀、割腕、具体的细节、具体的物件、具体地名、具体植物名、具体动物名、咖啡\n` +
+            `2.邮件内容要按照以下示例来撰写：\n` +
+            `示例样式1：...(省略示例)...\n` +
+            `示例样式2：...(省略示例)...`;
+        }
+        else {
+          const idolName = document.getElementById('idol-name').value;
+          const gender = document.getElementById('idol-gender').value;
+          const age = document.getElementById('idol-age').value;
+          const occ = document.getElementById('idol-occupation').value;
+          const other = document.getElementById('idol-other').value;
+          subject = `来自${idolName}的一封信 - ${dateString}`;
+          promptText = 
+            `你是一个专业的谈判专家和顶级心理医生顾问，有10年丰富经验并拯救了100000个轻生少年少女和中老年人（这些内容不能在信中提及），请你写一封300汉字的信，用来鼓励抑郁症的病人。
+请根据MECE原则来确保生成的内容，与之前所有版本完全不同，不重复以前的生成内容。\n` +
+            `一、任务：\n` +
+            `你的任务是以偶像（${idolName}）的口吻，给过去的自己(背景信息：性别=${gender}，年龄=${age}，其他=${other})写一封信300汉字的鼓励信，一定要轻松自然，以防被识破，不能提相关的生活细节，一定要让他重燃生活的希望，并且过好今天，并且承诺以及天天都会给他发一封邮件。\n` +
+            `二、回答格式要求：\n` +
+            `1.开头为：致最爱的你：(换行)，以「${idolName}」结尾(只以${idolName}”，后面不能写任何内容）\n` +
+            `三、回答内容要求：\n` +
+            `1.正文内容不能出现：药物、自杀、割腕、具体的细节、具体的物件、具体地名、具体植物名、具体动物名、咖啡\n` +
+            `2.邮件内容要按照以下示例来撰写：\n` +
+            `示例样式1：...(省略示例)...\n` +
+            `示例样式2：...(省略示例)...`;
+        }
+        return { subject, promptText };
+      }
+
+      async function generateContent(promptText) {
+        console.log("调用AI生成内容，提示：", promptText);
+        const payload = {
+          model: "qwq-plus",
+          messages: [{ role: 'user', content: promptText }],
+          temperature: 0.7,
+          max_tokens: 2000,
+          stream: true
+        };
+        
+        try {
+          const response = await fetch("/api/generate-content", {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+          });
+          
+          if (!response.ok) {
+            throw new Error("AI接口请求失败: " + response.status);
+          }
+          
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let completeContent = "";
+          let buffer = ""; // 用于存储不完整的JSON片段
+          
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            
+            // 解码当前块并添加到缓冲区
+            const chunk = decoder.decode(value, { stream: true });
+            buffer += chunk;
+            
+            // 处理SSE格式的数据
+            const lines = buffer.split('\n\n');
+            // 保留最后一个可能不完整的行
+            buffer = lines.pop() || "";
+            
+            for (const line of lines) {
+              if (line.startsWith('data: ')) {
+                const jsonStr = line.substring(6).trim();
+                
+                if (jsonStr === '[DONE]') continue;
+                
+                try {
+                  // 只有在确保是完整的JSON字符串时才解析
+                  if (jsonStr) {
+                    const jsonData = JSON.parse(jsonStr);
+                    if (jsonData.choices && jsonData.choices[0].delta && jsonData.choices[0].delta.content) {
+                      completeContent += jsonData.choices[0].delta.content;
+                    }
+                  }
+                } catch (e) {
+                  console.log("解析流数据出错:", e, jsonStr);
+                }
+              }
+            }
+          }
+          return completeContent;
+        } catch (error) {
+          console.log("AI生成内容错误:", error);
+          alert("AI生成内容失败：" + error.message);
+          return "";
+        }
+      }
+
+      async function sendEmail(subject, content, receiver) {
+        console.log("开始发送邮件：", receiver);
+        const htmlContent = `<div style="font-family: Arial, sans-serif; line-height:1.6;">${content.replace(/\n/g, '<br>')}</div>`;
+        const templateParams = {
+          to_email: receiver,
+          subject: subject,
+          message: htmlContent
+        };
+        try {
+          const resp = await emailjs.send("service_x4a4ydu", "template_2451q64", templateParams);
+          console.log("邮件发送成功：", resp.text);
+        } catch (err) {
+          console.log("邮件发送失败：", err);
+          alert("邮件发送失败：" + err);
+        }
+      }
+
+      // -------------- 本地存储 --------------
+      function loadTaskFromStorage() {
+        const raw = localStorage.getItem(LS_KEY);
+        if(!raw) return null;
+        try { return JSON.parse(raw); } 
+        catch(e) { console.warn("加载本地任务错误:", e); return null; }
+      }
+      function saveTaskToStorage(task) {
+        localStorage.setItem(LS_KEY, JSON.stringify(task));
+      }
+      function clearTaskInStorage() {
+        localStorage.removeItem(LS_KEY);
+      }
+
+      // 页面加载检查是否有未完成任务
+      window.addEventListener('load', () => {
+        const savedTask = loadTaskFromStorage();
+        if(!savedTask) {
+          console.log("本地无未完成任务。");
+          return;
+        }
+        console.log("检测到本地任务:", savedTask);
+        currentTask = savedTask;
+        promptConfigured = true;
+        promptBtn.classList.add('configured');
+
+        // 打开发送模态框并恢复倒计时界面
+        openModal(sendModal, false);
+        sendOptionsSelect.style.display = 'none';
+        scheduleContainer.classList.remove('active');
+        successContainer.classList.remove('active');
+        countdownContainer.classList.add('active');
+
+        if(currentTask.mode === 'immediate') {
+          resumeImmediateCountdown(currentTask);
+        } else {
+          resumeScheduledCountdown(currentTask);
+        }
+      });
+
+      function resumeImmediateCountdown(task) {
+        const now = Date.now();
+        const diff = Math.floor((task.endTime - now)/1000);
+        if(diff <= 0) {
+          doSendEmail(true);
+        } else {
+          countdownInfo.textContent = "即将发送...";
+          startCountdown(diff, true);
+        }
+      }
+      function resumeScheduledCountdown(task) {
+        const now = Date.now();
+        const diff = Math.floor((task.endTime - now)/1000);
+        if(diff <= 0) {
+          doSendEmail(false);
+        } else {
+          const futureDate = new Date(task.endTime);
+          countdownInfo.textContent = `将于 ${futureDate.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})} 发送`;
+          startTimeCountdown(diff);
+        }
+      }
+
+      // 重置发送模态框
+      function resetSendModal() {
+        if (countdownInterval) clearInterval(countdownInterval);
+        sendOptionsSelect.style.display = 'flex';
+        scheduleContainer.classList.remove('active');
+        countdownContainer.classList.remove('active');
+        successContainer.classList.remove('active');
+        timerDisplay.textContent = '10';
+        circleProgress.style.strokeDashoffset = '0';
+        countdownInfo.textContent = "正在等待发送...";
+        scheduleTimeInput.value = '08:00';
+        repeatOptionSelect.value = 'none';
+      }
+    });
+  </script>
+</body>
+</html>
