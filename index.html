@@ -529,128 +529,128 @@
     </div>
   </div>
   
-  <!-- Prompt 模态框 -->
-  <div id="prompt-modal" class="modal-overlay">
-    <div class="modal-content">
-      <button class="modal-close" data-modal-close="prompt-modal">&times;</button>
-      <div class="modal-body">
-        
-        <!-- Prompt 滚轮选择：10年后自己 / 亲人 / 偶像 -->
-        <div class="form-group">
-          <label for="prompt-type" class="form-label">想要谁的鼓励？</label>
-          <select id="prompt-type" class="form-select">
-            <option value="future-self">10年后的自己</option>
-            <option value="family">亲人</option>
-            <option value="idol">偶像</option>
-          </select>
-        </div>
-
-        <!-- 10年后自己 -->
-        <div id="future-self-form" class="prompt-details" style="display:block;">
-		<div class="row">
-  <div class="col-12">
-    <h5 class="mb-3">个人信息</h5>
-  </div>
-</div>
-          <div class="row">
-            <div class="col-12 col-md-4 mb-3">
-		    
-              <label for="future-gender" class="form-label">性别</label>
-              <select class="form-select" id="future-gender">
-                <option value="男">男</option>
-                <option value="女">女</option>
-              </select>
-            </div>
-            <div class="col-12 col-md-4 mb-3">
-              <label for="future-age" class="form-label">年龄</label>
-              <input type="number" class="form-control" id="future-age" value="35" min="1" max="120">
-            </div>
-            <div class="col-12 col-md-4 mb-3">
-              <label for="future-occupation" class="form-label">职业</label>
-              <input type="text" class="form-control" id="future-occupation" value="程序员">
-            </div>
-          </div>
-          <div class="row">
-            <div class="col-12 mb-3">
-              <label for="future-other" class="form-label">其他信息（选填）</label>
-              <input type="text" class="form-control" id="future-other" placeholder="其他想要添加的身份信息">
-            </div>
-          </div>
-        </div>
-
-        <!-- 亲人 -->
-        <div id="family-form" class="prompt-details" style="display:none;">
-		<div class="row">
-  <div class="col-12">
-    <h5 class="mb-3">个人信息</h5>
-  </div>
-</div>
-          <div class="row">
-            <div class="col-12 col-md-4 mb-3">
-              <label for="family-gender" class="form-label">性别</label>
-              <select class="form-select" id="family-gender">
-                <option value="女">女</option>
-                <option value="男">男</option>
-              </select>
-            </div>
-            <div class="col-12 col-md-4 mb-3">
-              <label for="family-age" class="form-label">年龄</label>
-              <input type="number" class="form-control" id="family-age" value="17" min="1" max="120">
-            </div>
-            <div class="col-12 col-md-4 mb-3">
-              <label for="family-occupation" class="form-label">职业</label>
-              <input type="text" class="form-control" id="family-occupation" value="学生">
-            </div>
-          </div>
-          <div class="row">
-            <div class="col-12 col-md-6 mb-3">
-              <label for="family-relative" class="form-label">亲人身份</label>
-              <input type="text" class="form-control" id="family-relative" value="奶奶">
-            </div>
-            <div class="col-12 col-md-6 mb-3">
-              <label for="family-other" class="form-label">其他信息（选填）</label>
-              <input type="text" class="form-control" id="family-other" placeholder="其他想要添加的身份信息">
-            </div>
-          </div>
-        </div>
-
-        <!-- 偶像 -->
-        <div id="idol-form" class="prompt-details" style="display:none;">
-		<div class="row">
-  <div class="col-12">
-    <h5 class="mb-3">个人信息</h5>
-  </div>
-</div>
-          <div class="row">
-            <div class="col-12 col-md-4 mb-3">
-              <label for="idol-gender" class="form-label">性别</label>
-              <select class="form-select" id="idol-gender">
-                <option value="男">男</option>
-                <option value="女">女</option>
-              </select>
-            </div>
-            <div class="col-12 col-md-4 mb-3">
-              <label for="idol-age" class="form-label">年龄</label>
-              <input type="number" class="form-control" id="idol-age" value="16" min="1" max="120">
-            </div>
-            <div class="col-12 col-md-4 mb-3">
-              <label for="idol-occupation" class="form-label">职业</label>
-              <input type="text" class="form-control" id="idol-occupation" value="学生">
-            </div>
-          </div>
-          <div class="row">
-            <div class="col-12 col-md-6 mb-3">
-              <label for="idol-name" class="form-label">偶像</label>
-              <input type="text" class="form-control" id="idol-name" value="华语歌坛创作型歌手周杰伦">
-            </div>
-            <div class="col-12 col-md-6 mb-3">
-              <label for="idol-other" class="form-label">其他信息（选填）</label>
-              <input type="text" class="form-control" id="idol-other" placeholder="其他想要添加的身份信息">
-            </div>
-          </div>
-        </div>
-
-      </div>
+	<div id="prompt-modal" class="modal-overlay">
+	  <div class="modal-content">
+	    <button class="modal-close" data-modal-close="prompt-modal">&times;</button>
+	    <div class="modal-body">
+	      
+	      <!-- Prompt 滚轮选择：10年后自己 / 亲人 / 偶像 -->
+	      <div class="form-group mb-4">
+	        <label for="prompt-type" class="form-label">想要谁的鼓励？</label>
+	        <select id="prompt-type" class="form-select">
+	          <option value="future-self">10年后的自己</option>
+	          <option value="family">亲人</option>
+	          <option value="idol">偶像</option>
+	        </select>
+	      </div>
+	
+	      <!-- 10年后自己 -->
+	      <div id="future-self-form" class="prompt-details" style="display:block;">
+	        <div class="row mb-3">
+	          <div class="col-12">
+	            <h5>个人信息</h5>
+	          </div>
+	        </div>
+	        <div class="row mb-3">
+	          <div class="col-12 col-md-4 mb-3">
+	            <label for="future-gender" class="form-label">性别</label>
+	            <select class="form-select" id="future-gender">
+	              <option value="男">男</option>
+	              <option value="女">女</option>
+	            </select>
+	          </div>
+	          <div class="col-12 col-md-4 mb-3">
+	            <label for="future-age" class="form-label">年龄</label>
+	            <input type="number" class="form-control" id="future-age" value="35" min="1" max="120">
+	          </div>
+	          <div class="col-12 col-md-4 mb-3">
+	            <label for="future-occupation" class="form-label">职业</label>
+	            <input type="text" class="form-control" id="future-occupation" value="程序员">
+	          </div>
+	        </div>
+	        <div class="row">
+	          <div class="col-12 mb-3">
+	            <label for="future-other" class="form-label">其他信息（选填）</label>
+	            <input type="text" class="form-control" id="future-other" placeholder="其他想要添加的身份信息">
+	          </div>
+	        </div>
+	      </div>
+	
+	      <!-- 亲人 -->
+	      <div id="family-form" class="prompt-details" style="display:none;">
+	        <div class="row mb-3">
+	          <div class="col-12">
+	            <h5>个人信息</h5>
+	          </div>
+	        </div>
+	        <div class="row mb-3">
+	          <div class="col-12 col-md-4 mb-3">
+	            <label for="family-gender" class="form-label">性别</label>
+	            <select class="form-select" id="family-gender">
+	              <option value="女">女</option>
+	              <option value="男">男</option>
+	            </select>
+	          </div>
+	          <div class="col-12 col-md-4 mb-3">
+	            <label for="family-age" class="form-label">年龄</label>
+	            <input type="number" class="form-control" id="family-age" value="17" min="1" max="120">
+	          </div>
+	          <div class="col-12 col-md-4 mb-3">
+	            <label for="family-occupation" class="form-label">职业</label>
+	            <input type="text" class="form-control" id="family-occupation" value="学生">
+	          </div>
+	        </div>
+	        <div class="row">
+	          <div class="col-12 col-md-6 mb-3">
+	            <label for="family-relative" class="form-label">亲人身份</label>
+	            <input type="text" class="form-control" id="family-relative" value="奶奶">
+	          </div>
+	          <div class="col-12 col-md-6 mb-3">
+	            <label for="family-other" class="form-label">其他信息（选填）</label>
+	            <input type="text" class="form-control" id="family-other" placeholder="其他想要添加的身份信息">
+	          </div>
+	        </div>
+	      </div>
+	
+	      <!-- 偶像 -->
+	      <div id="idol-form" class="prompt-details" style="display:none;">
+	        <div class="row mb-3">
+	          <div class="col-12">
+	            <h5>个人信息</h5>
+	          </div>
+	        </div>
+	        <div class="row mb-3">
+	          <div class="col-12 col-md-4 mb-3">
+	            <label for="idol-gender" class="form-label">性别</label>
+	            <select class="form-select" id="idol-gender">
+	              <option value="男">男</option>
+	              <option value="女">女</option>
+	            </select>
+	          </div>
+	          <div class="col-12 col-md-4 mb-3">
+	            <label for="idol-age" class="form-label">年龄</label>
+	            <input type="number" class="form-control" id="idol-age" value="16" min="1" max="120">
+	          </div>
+	          <div class="col-12 col-md-4 mb-3">
+	            <label for="idol-occupation" class="form-label">职业</label>
+	            <input type="text" class="form-control" id="idol-occupation" value="学生">
+	          </div>
+	        </div>
+	        <div class="row">
+	          <div class="col-12 col-md-6 mb-3">
+	            <label for="idol-name" class="form-label">偶像</label>
+	            <input type="text" class="form-control" id="idol-name" value="华语歌坛创作型歌手周杰伦">
+	          </div>
+	          <div class="col-12 col-md-6 mb-3">
+	            <label for="idol-other" class="form-label">其他信息（选填）</label>
+	            <input type="text" class="form-control" id="idol-other" placeholder="其他想要添加的身份信息">
+	          </div>
+	        </div>
+	      </div>
+	
+	    </div>
+	  </div>
+	</div>
       <div class="modal-footer">
         <button class="modal-btn modal-btn-secondary" data-modal-close="prompt-modal">取消</button>
         <button id="confirm-prompt-btn" class="modal-btn modal-btn-primary">确定</button>
