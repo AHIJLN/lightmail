@@ -60,6 +60,14 @@
     .logo span:nth-child(3) { color: var(--primary-color); }
     .logo span:nth-child(4) { color: var(--google-green); }
 
+    /* 添加标语样式 */
+    .tagline {
+      margin-top: 5px;
+      font-size: 1rem;
+      color: var(--medium-gray);
+      text-align: center;
+    }
+
     /* 邮箱输入部分 */
     .email-input-split {
       display: flex;
@@ -147,7 +155,7 @@
       background-color: #e0e0e0;
     }
 
-    /* 对于“主按钮”（例如确定）再做高亮处理 */
+    /* 对于"主按钮"（例如确定）再做高亮处理 */
     .modal-btn-primary {
       background-color: var(--primary-color);
       color: #fff;
@@ -156,7 +164,7 @@
     .modal-btn-primary:hover {
       background-color: var(--primary-hover);
     }
-    /* “次按钮” */
+    /* "次按钮" */
     .modal-btn-secondary {
       background-color: var(--button-bg);
       color: var(--text-color);
@@ -439,6 +447,15 @@
         font-size: 20px;
       }
     }
+
+    /* 添加"个人信息"区块标题样式 */
+    .section-title {
+      font-weight: 500;
+      color: var(--text-color);
+      border-bottom: 1px solid var(--light-gray);
+      padding-bottom: 5px;
+      margin-top: 15px;
+    }
   </style>
 </head>
 <body>
@@ -448,6 +465,7 @@
       <h1 class="logo">
         <span>L</span><span>i</span><span>g</span><span>ht</span><span>ma</span><span>il</span>
       </h1>
+      <p class="tagline">一封鼓励，增百自信</p>
     </div>
     
     <!-- Email 输入 (拆分前缀和后缀) -->
@@ -482,7 +500,7 @@
     <!-- Action Buttons -->
     <div class="buttons-container">
       <div id="send-btn" class="action-btn">发送确定</div>
-      <div id="prompt-btn" class="action-btn">Prompt</div>
+      <div id="prompt-btn" class="action-btn">谁来鼓励</div>
     </div>
   </div>
   
@@ -567,7 +585,7 @@
         
         <!-- Prompt 滚轮选择：10年后自己 / 亲人 / 偶像 -->
         <div class="form-group">
-          <label for="prompt-type" class="form-label">请选择一个场景（滚轮模拟）</label>
+          <label for="prompt-type" class="form-label">请选择要谁的鼓励？</label>
           <select id="prompt-type" class="form-select">
             <option value="future-self">10年后的自己</option>
             <option value="family">亲人</option>
@@ -577,6 +595,7 @@
 
         <!-- 10年后自己 -->
         <div id="future-self-form" class="prompt-details" style="display:block;">
+          <div class="section-title mb-2">个人信息</div>
           <div class="row">
             <div class="col-12 col-md-4 mb-3">
               <label for="future-gender" class="form-label">性别</label>
@@ -604,6 +623,7 @@
 
         <!-- 亲人 -->
         <div id="family-form" class="prompt-details" style="display:none;">
+          <div class="section-title mb-2">个人信息</div>
           <div class="row">
             <div class="col-12 col-md-4 mb-3">
               <label for="family-gender" class="form-label">性别</label>
@@ -635,6 +655,7 @@
 
         <!-- 偶像 -->
         <div id="idol-form" class="prompt-details" style="display:none;">
+          <div class="section-title mb-2">个人信息</div>
           <div class="row">
             <div class="col-12 col-md-4 mb-3">
               <label for="idol-gender" class="form-label">性别</label>
@@ -801,7 +822,7 @@
       // -------------- 打开发送模态框 ----------------
       sendBtn.addEventListener('click', function() {
         if (!promptConfigured) {
-          alert("请先设置 Prompt！");
+          alert("请先设置 谁来鼓励的Prompt！");
           return;
         }
         // 检查邮箱输入
@@ -880,7 +901,7 @@
         resetSendModal();
       }
 
-      // 发送成功提示 “好的” 按钮
+      // 发送成功提示 "好的" 按钮
       successConfirmBtn.addEventListener('click', function() {
         resetSendModal();
         closeModal(sendModal);
@@ -997,7 +1018,7 @@
 		`一、任务：\n`+
 		`你的任务是以10年后成功的自己的口吻，给过去的自己(背景信息：性别=${gender}，年龄=${age}，职业=${occ}，其他=${other})写一封信300汉字的鼓励信，一定要轻松自然，以防被识破，不能提过去的自己相关的生活细节，一定要让过去的自己重燃生活的希望，并且过好今天，并且承诺以及天天都会给过去的自己发一封邮件，让过去的自己好好过完今天，期待明天，署名为未来的自己。\n`+
 		`二、回答格式要求：\n` +
-		`1.开头为：致过去的我：(换行)，以「未来的你」结尾(只以"未来的你”，后面不能写任何内容）\n` +
+		`1.开头为：致过去的我：(换行)，以「未来的你」结尾(只以"未来的你"，后面不能写任何内容）\n` +
 		`三、回答内容要求：\n` +
 		`1.正文内容不能出现：药物、自杀、割腕、具体的细节、具体的物件、具体地名、具体植物名、具体动物名、咖啡\n`+
 		`2.邮件内容要按照以下示例来撰写：\n`+
@@ -1044,15 +1065,15 @@
 	 
 	 
 	`二、回答格式要求：\n` +
-	`1.开头为：致最爱的你：(换行)，以「${idolName}」结尾(只以${idolName}”，后面不能写任何内容）\n` +
+	`1.开头为：致最爱的你：(换行)，以「${idolName}」结尾(只以${idolName}"，后面不能写任何内容）\n` +
 	`三、回答内容要求：\n` +
 	`1.正文内容不能出现：药物、自杀、割腕、具体的细节、具体的物件、具体地名、具体植物名、具体动物名、咖啡\n` +
 	`2.邮件内容要按照以下示例来撰写：\n` +
 	`示例样式1：\n` +
 	 
-		      `回望过去，或许你曾感到孤单，也曾在黑暗里怀疑过自己。但就像我在《稻香》里写的：“珍惜一切，就算没有拥有”，那些经历都在悄悄塑造你，让你比想象中更强大。要知道，生活这条路上，别轻易对自己说“不可能”，因为只要你敞开心扉，梦想就能找到出口。偶尔焦虑无助，不代表你软弱，只是需要一点时间去消化痛楚。走过低潮后，你会发现，光仍在不远处闪亮。
+		      `回望过去，或许你曾感到孤单，也曾在黑暗里怀疑过自己。但就像我在《稻香》里写的："珍惜一切，就算没有拥有"，那些经历都在悄悄塑造你，让你比想象中更强大。要知道，生活这条路上，别轻易对自己说"不可能"，因为只要你敞开心扉，梦想就能找到出口。偶尔焦虑无助，不代表你软弱，只是需要一点时间去消化痛楚。走过低潮后，你会发现，光仍在不远处闪亮。
 	 
-	  我常说，名和利是跟自由换来的，创作与坚持不该被环境淘汰。现在你或许觉得前路漫长，可每一个清晨都是重燃希望的时刻。别怕冒险，人生的转折往往在不经意间出现。你若懂得温柔对待自己的不安，慢慢地便会走出迷茫，找到脚下的方向。那种“一意孤行”的勇气，也正是让我们不断发光的源头。
+	  我常说，名和利是跟自由换来的，创作与坚持不该被环境淘汰。现在你或许觉得前路漫长，可每一个清晨都是重燃希望的时刻。别怕冒险，人生的转折往往在不经意间出现。你若懂得温柔对待自己的不安，慢慢地便会走出迷茫，找到脚下的方向。那种"一意孤行"的勇气，也正是让我们不断发光的源头。
 	 
 	  如果你正难以排解心中的疑惑，不要紧，我会每天写信给你，就像在演唱会里我总喜欢和前排的同学互动一样，我的大门永远敞开，只要你愿意，就能随时进来。我相信每一步坚持，都会在明天开出花朵。无论遇到什么风雨，都别忘了，你并不孤单。让我陪你一起探索那些未被发现的可能性。
 	 
@@ -1062,11 +1083,11 @@
 	 
 	`示例样式2：\n` +
 	 
-		    `生活就像一首没有谱子的即兴曲，总有高低起伏，意外与惊喜交织其中。或许你正经历低谷，感到未来遥不可及，但请记住：“名和利其实是跟自由换来的。”正是因为经历过迷茫与挫败，我们才学会如何突破桎梏，追寻内心真正渴望的自由。面对风雨，请不要轻言放弃，因为每一段不易的时光都在孕育着明天的旋律。
+		    `生活就像一首没有谱子的即兴曲，总有高低起伏，意外与惊喜交织其中。或许你正经历低谷，感到未来遥不可及，但请记住："名和利其实是跟自由换来的。"正是因为经历过迷茫与挫败，我们才学会如何突破桎梏，追寻内心真正渴望的自由。面对风雨，请不要轻言放弃，因为每一段不易的时光都在孕育着明天的旋律。
 	 
-	回想过去的点滴，你曾为梦想不断努力，那份执着让你变得更加坚韧。就像我常说的：“不要这么容易就想放弃，追不到的梦想换个梦不就得了。”勇敢地尝试，不怕走出那条少有人走的路，因为正是在不断挑战中，你才能发现自己的无限潜能。无论现实如何残酷，总有一种力量在内心悄然生长，带你走出阴霾，拥抱阳光。
+	回想过去的点滴，你曾为梦想不断努力，那份执着让你变得更加坚韧。就像我常说的："不要这么容易就想放弃，追不到的梦想换个梦不就得了。"勇敢地尝试，不怕走出那条少有人走的路，因为正是在不断挑战中，你才能发现自己的无限潜能。无论现实如何残酷，总有一种力量在内心悄然生长，带你走出阴霾，拥抱阳光。
 	 
-	我始终坚信，每个人都有自己的乐章需要去谱写。虽然路途漫长，但“我不喜欢当一个孤独的艺术家，我的大门永远是开着的。”就算身处低谷，你也不曾孤单，因为总有一份温暖和支持在远方等待着你。也许未来的路依旧布满荆棘，但正如电影需要音乐贯穿，缺少了灵魂便失去了色彩，你的每一份努力都在为人生注入独特的韵律和情感。
+	我始终坚信，每个人都有自己的乐章需要去谱写。虽然路途漫长，但"我不喜欢当一个孤独的艺术家，我的大门永远是开着的。"就算身处低谷，你也不曾孤单，因为总有一份温暖和支持在远方等待着你。也许未来的路依旧布满荆棘，但正如电影需要音乐贯穿，缺少了灵魂便失去了色彩，你的每一份努力都在为人生注入独特的韵律和情感。
 	 
 	请用心聆听生活的旋律，把每一次跌倒都当作前进的节拍。无论今天多么沉重，都请相信，明日的太阳依旧会升起，用它温柔而坚定的光芒，照亮你前行的道路。未来的路还很长，而你，正以自己的方式，走出一条与众不同的精彩之路。
 	 
