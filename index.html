@@ -1076,21 +1076,19 @@
       }
 
 
-	
-	async function generateContent(promptText) {
+// 客户端代码
+async function generateContent(promptText) {
   console.log("调用AI生成内容，提示：", promptText);
-
-  // 1. 明确指定 stream: false
   const payload = {
     model: "qwq-plus",
     messages: [{ role: 'user', content: promptText }],
     temperature: 0.7,
     max_tokens: 2000,
-    stream: false // <-- 不要再开启流式
+    stream: true
   };
-
+  
   try {
-    // 2. 普通 fetch，一次性获取完整 JSON
+    // 使用 Pages Functions API 端点
     const response = await fetch("/api/generate-content", {
       method: 'POST',
       headers: {
@@ -1098,31 +1096,57 @@
       },
       body: JSON.stringify(payload)
     });
-
+    
     if (!response.ok) {
       throw new Error("AI接口请求失败: " + response.status);
     }
-
-    // 3. 直接解析 JSON
-    const data = await response.json();
-
-    // 4. 从返回数据中提取文本
-    // 可能是 data.choices[0].message.content 或 data.choices[0].delta.content
-    // 具体结构视 DashScope 返回格式而定
+    
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
     let completeContent = "";
-    if (data.choices && data.choices.length > 0) {
-      // 如果 dashscope 返回的是 OpenAI风格:
-      if (data.choices[0].message && data.choices[0].message.content) {
-        completeContent = data.choices[0].message.content;
+    let buffer = ""; // 用于存储不完整的JSON片段
+    
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      
+      // 解码当前块并添加到缓冲区
+      const chunk = decoder.decode(value, { stream: true });
+      buffer += chunk;
+      
+      // 处理JSON数据，查找完整的JSON对象
+      let startPos = 0;
+      let endPos;
+      
+      while ((endPos = buffer.indexOf("}", startPos)) !== -1) {
+        endPos++; // 包含 "}"
+        
+        try {
+          // 尝试解析可能的JSON对象
+          const jsonStr = buffer.substring(startPos, endPos);
+          const jsonData = JSON.parse(jsonStr);
+          
+          // 如果成功解析，处理数据
+          if (jsonData.choices && jsonData.choices[0].delta && jsonData.choices[0].delta.content) {
+            completeContent += jsonData.choices[0].delta.content;
+          }
+          
+          // 移动到下一个可能的JSON对象
+          startPos = endPos;
+        } catch (e) {
+          // 如果当前位置不是完整的JSON，尝试下一个 "}" 位置
+          startPos = buffer.indexOf("{", startPos);
+          if (startPos === -1) break;
+        }
       }
-      // 如果有其他字段也可自行判断
-      else if (data.choices[0].delta && data.choices[0].delta.content) {
-        completeContent = data.choices[0].delta.content;
+      
+      // 保留未处理的部分
+      if (startPos > 0) {
+        buffer = buffer.substring(startPos);
       }
     }
 
     return completeContent;
-
   } catch (error) {
     console.log("AI生成内容错误:", error);
     alert("AI生成内容失败：" + error.message);
